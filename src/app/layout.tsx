@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
-import GlobalClientEffects from "@/components/GlobalClientEffects";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
@@ -39,7 +38,7 @@ export default function RootLayout({
       <WhatsAppButton />
       <ScrollToTop />
       <Toaster />
-      <GlobalClientEffects />
+      
     </>
   );
 
