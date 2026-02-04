@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Despachante Nossa Senhora - Documentação Veicular em SP",
+  title: "Despachante Nossa Senhora Aparecida- Documentação Veicular em SP",
   description:
     "Soluções completas em documentação veicular com agilidade e segurança. Licenciamento, transferência, emplacamento e muito mais.",
 };

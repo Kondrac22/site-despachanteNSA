@@ -15,7 +15,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <h3 className="text-lg font-bold mb-4">
-              Despachante Nossa Senhora
+              Despachante Nossa Senhora Aparecida
             </h3>
             <p className="text-sm opacity-90">
               Soluções completas em documentação veicular com agilidade e
@@ -28,15 +28,15 @@ export default function Footer() {
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
-                <span>(11) 99532-4559</span>
+                <span>(11) 9.9532-4559</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                <span>contato@nossasenhora.com.br</span>
+                <span>despansa@gmail.com</span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                <span>São Paulo, SP</span>
+                <span>Rua Alvaro alvim, 736 Vila Pauliceia, SP CEP 09693-000</span>
               </div>
             </div>
           </div>
@@ -74,7 +74,7 @@ export default function Footer() {
 
         <div className="border-t border-primary-foreground/20 mt-8 pt-8 text-center text-sm">
           <p className="opacity-90">
-            © 2024 Despachante Nossa Senhora. Todos os direitos reservados.
+            © 2026 Despachante Nossa Senhora Aparecida. Todos os direitos reservados.
           </p>
           <Link
             href="/politica-privacidade"

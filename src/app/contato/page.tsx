@@ -89,7 +89,7 @@ export default function ContatoPage() {
                   <div>
                     <h3 className="font-semibold mb-1">E-mail</h3>
                     <p className="text-muted-foreground">
-                      despaNSA@gmail.com
+                      despansa@gmail.com
                     </p>
                   </div>
                 </div>

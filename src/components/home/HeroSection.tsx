@@ -9,12 +9,12 @@ export default function HeroSection() {
           <div className="space-y-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex items-center justify-center w-16 h-16 rounded-full bg-white">
-                <span className="text-3xl font-bold text-primary">NS</span>
+                <span className="text-3xl font-bold text-primary">NSA</span>
               </div>
               <h1 className="text-4xl md:text-5xl font-bold">
                 Despachante
                 <br />
-                Nossa Senhora
+                Nossa Senhora Aparecida
               </h1>
             </div>
 

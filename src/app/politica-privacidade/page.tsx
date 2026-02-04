@@ -145,7 +145,7 @@ export default function PoliticaPrivacidadePage() {
               </p>
               <ul className="list-none space-y-2 mt-4">
                 <li>
-                  <strong>E-mail:</strong> despaNSA@gmail.com
+                  <strong>E-mail:</strong> despansa@gmail.com
                 </li>
                 <li>
                   <strong>Telefone:</strong> (11) 9.9532-4559
