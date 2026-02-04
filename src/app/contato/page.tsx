@@ -78,7 +78,7 @@ export default function ContatoPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1">Telefone</h3>
-                    <p className="text-muted-foreground">(11) 99532-4559</p>
+                    <p className="text-muted-foreground">(11) 9.9532-4559</p>
                   </div>
                 </div>
 
@@ -89,7 +89,7 @@ export default function ContatoPage() {
                   <div>
                     <h3 className="font-semibold mb-1">E-mail</h3>
                     <p className="text-muted-foreground">
-                      contato@nossasenhora.com.br
+                      despaNSA@gmail.com
                     </p>
                   </div>
                 </div>
@@ -100,7 +100,7 @@ export default function ContatoPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1">Endereço</h3>
-                    <p className="text-muted-foreground">São Paulo, SP</p>
+                    <p className="text-muted-foreground">Rua Alvaro alvim, 736 Vila Pauliceia, SP CEP 09693-000</p>
                   </div>
                 </div>
 
@@ -115,7 +115,7 @@ export default function ContatoPage() {
                     <p className="text-muted-foreground">
                       Segunda a Sexta: 8h às 18h
                       <br />
-                      Sábado: 8h às 12h
+                      Sábado: 9h às 12h
                     </p>
                   </div>
                 </div>

@@ -145,13 +145,13 @@ export default function PoliticaPrivacidadePage() {
               </p>
               <ul className="list-none space-y-2 mt-4">
                 <li>
-                  <strong>E-mail:</strong> contato@nossasenhora.com.br
+                  <strong>E-mail:</strong> despaNSA@gmail.com
                 </li>
                 <li>
-                  <strong>Telefone:</strong> (11) 99532-4559
+                  <strong>Telefone:</strong> (11) 9.9532-4559
                 </li>
                 <li>
-                  <strong>Endereço:</strong> São Paulo, SP
+                  <strong>Endereço:</strong>Rua Alvaro alvim, 736 Vila Pauliceia, SP CEP 09693-000
                 </li>
               </ul>
             </section>
@@ -166,7 +166,7 @@ export default function PoliticaPrivacidadePage() {
                 manter informado sobre como protegemos suas informações.
               </p>
               <p className="mt-4">
-                <strong>Última atualização:</strong> Janeiro de 2024
+                <strong>Última atualização:</strong> Janeiro de 2026
               </p>
             </section>
           </div>
