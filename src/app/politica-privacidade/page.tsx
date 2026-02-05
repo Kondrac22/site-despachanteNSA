@@ -13,7 +13,7 @@ export default function PoliticaPrivacidadePage() {
                 1. Introdução
               </h2>
               <p>
-                O Despachante Nossa Senhora está comprometido com a proteção da
+                O Despachante Nossa Senhora Aparecida está comprometido com a proteção da
                 privacidade e dos dados pessoais de seus clientes, em
                 conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº
                 13.709/2018).

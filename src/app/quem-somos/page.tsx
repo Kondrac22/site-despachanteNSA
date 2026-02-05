@@ -18,7 +18,7 @@ export default function QuemSomosPage() {
               <h2 className="text-3xl font-bold mb-6">Nossa História</h2>
               <div className="prose prose-lg max-w-none">
                 <p className="text-muted-foreground leading-relaxed">
-                  O Despachante Nossa Senhora nasceu da necessidade de oferecer
+                  O Despachante Nossa Senhora Aparecida nasceu da necessidade de oferecer
                   serviços de documentação veicular com excelência, agilidade e
                   transparência. Com anos de experiência no mercado, construímos
                   uma reputação sólida baseada na confiança e satisfação dos

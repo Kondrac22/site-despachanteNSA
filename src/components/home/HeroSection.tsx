@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -7,10 +8,15 @@ export default function HeroSection() {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-white">
-                <span className="text-3xl font-bold text-primary">NSA</span>
-              </div>
+            <div className="flex items-center gap-6 mb-4">
+              <Image
+                src="/logo.png"
+                alt="Logo Despachante Nossa Senhora Aparecida"
+                width={100}
+                height={100}
+                className="h-28 w-auto flex-shrink-0"
+                priority
+              />
               <h1 className="text-4xl md:text-5xl font-bold">
                 Despachante
                 <br />

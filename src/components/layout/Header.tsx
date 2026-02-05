@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -20,12 +21,15 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center space-x-2">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary">
-            <span className="text-xl font-bold text-primary-foreground">
-              NS
-            </span>
-          </div>
-          <span className="text-xl font-bold text-primary">Nossa Senhora</span>
+          <Image
+            src="/logo.png"
+            alt="Logo Despachante Nossa Senhora Aparecida"
+            width={50}
+            height={50}
+            className="h-12 w-auto"
+            priority
+          />
+          <span className="text-sm font-bold text-primary hidden sm:inline">Nossa Senhora Aparecida</span>
         </Link>
 
         <nav className="hidden md:flex items-center space-x-6">
