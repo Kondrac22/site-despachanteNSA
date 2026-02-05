@@ -3,24 +3,20 @@ import { Car, Truck } from 'lucide-react';
 
 export default function LicensingTable() {
   const vehiclesData = [
-    { final: '1', mes: 'Janeiro' },
-    { final: '2', mes: 'Fevereiro' },
-    { final: '3', mes: 'Março' },
-    { final: '4', mes: 'Abril' },
-    { final: '5', mes: 'Maio' },
-    { final: '6', mes: 'Junho' },
-    { final: '7', mes: 'Julho' },
-    { final: '8', mes: 'Agosto' },
-    { final: '9', mes: 'Setembro' },
-    { final: '0', mes: 'Outubro' },
+    { final: '1 e 2', mes: 'Julho' },
+    { final: '3 e 4', mes: 'Agosto' },
+    { final: '5 e 6', mes: 'Setembro' },
+    { final: '7 e 8', mes: 'Outubro' },
+    { final: '9', mes: 'Novembro' },
+    { final: '0', mes: 'Dezembro' },
   ];
 
   const trucksData = [
-    { final: '1 e 2', mes: 'Janeiro' },
-    { final: '3 e 4', mes: 'Fevereiro' },
-    { final: '5 e 6', mes: 'Março' },
-    { final: '7 e 8', mes: 'Abril' },
-    { final: '9 e 0', mes: 'Maio' },
+    { final: '1, 2 e 3', mes: 'Agosto' },
+    { final: '4 e 5', mes: 'Setembro' },
+    { final: '6, 7 e 8', mes: 'Outubro' },
+    { final: '9', mes: 'Novembro' },
+    { final: '0', mes: 'Dezembro' },
   ];
 
   return (
@@ -28,7 +24,7 @@ export default function LicensingTable() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Calendário de Licenciamento SP 2024
+            Calendário de Licenciamento SP 2026
           </h2>
           <p className="text-lg text-muted-foreground">
             Confira os prazos de licenciamento por final de placa
@@ -70,8 +66,8 @@ export default function LicensingTable() {
                   <Truck className="h-6 w-6 text-[var(--orange)]" />
                 </div>
                 <div>
-                  <CardTitle>Caminhões</CardTitle>
-                  <CardDescription>Veículos de carga</CardDescription>
+                  <CardTitle>Veículos Pesados</CardTitle>
+                  <CardDescription>Caminhões e veículos de carga</CardDescription>
                 </div>
               </div>
             </CardHeader>
