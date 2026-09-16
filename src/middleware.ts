@@ -1,57 +1,52 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
+// Protege /prestacao-servicos no nível do servidor (não só no frontend).
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
+  let response = NextResponse.next({ request });
 
-  // Instancia o cliente do Supabase adaptado para o Edge / Middleware
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          response = NextResponse.next({
-            request,
-          })
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
-          )
+          );
         },
       },
     }
-  )
+  );
 
-  // Atualiza a sessão e recupera o usuário logado
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const url = request.nextUrl.clone()
-  const isAuthRoute = url.pathname.startsWith('/prestacao-servicos/login')
-  const isProtectedRoute = url.pathname.startsWith('/prestacao-servicos')
+  const { pathname } = request.nextUrl;
+  const isModuleRoute = pathname.startsWith("/prestacao-servicos");
+  const isLoginRoute = pathname === "/prestacao-servicos/login";
 
-  // Redireciona se não estiver logado
-  if (!user && isProtectedRoute && !isAuthRoute) {
-    url.pathname = '/prestacao-servicos/login'
-    return NextResponse.redirect(url)
+  if (isModuleRoute && !isLoginRoute && !user) {
+    const loginUrl = new URL("/prestacao-servicos/login", request.url);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // Redireciona para o dashboard se já estiver logado
-  if (user && isAuthRoute) {
-    url.pathname = '/prestacao-servicos'
-    return NextResponse.redirect(url)
+  if (isLoginRoute && user) {
+    const dashboardUrl = new URL("/prestacao-servicos", request.url);
+    return NextResponse.redirect(dashboardUrl);
   }
 
-  return response
+  return response;
 }
 
 export const config = {
-  matcher: ['/prestacao-servicos/:path*'],
-}
+  matcher: ["/prestacao-servicos/:path*"],
+};
