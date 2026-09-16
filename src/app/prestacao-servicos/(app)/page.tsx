@@ -1,3 +1,4 @@
+import Link from "next/link";
 import DashboardFilters from "@/components/prestacao-servicos/DashboardFilters";
 import CreatedToast from "@/components/prestacao-servicos/CreatedToast";
 import {
@@ -96,7 +97,15 @@ export default async function DashboardPage({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-lg border bg-background p-4 shadow-sm">
-          <h2 className="mb-3 font-semibold">Serviços recentes</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-semibold">Serviços recentes</h2>
+            <Link
+              href="/prestacao-servicos/servicos"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Ver todos
+            </Link>
+          </div>
           {recentRequests.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Nenhum serviço encontrado para os filtros selecionados.
@@ -110,7 +119,8 @@ export default async function DashboardPage({
                     <th className="py-2 pr-2">Serviço</th>
                     <th className="py-2 pr-2">Status</th>
                     <th className="py-2 pr-2">Solicitante</th>
-                    <th className="py-2">Data</th>
+                    <th className="py-2 pr-2">Data</th>
+                    <th className="py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -128,8 +138,16 @@ export default async function DashboardPage({
                       <td className="py-2 pr-2">
                         {request.profiles?.name ?? "—"}
                       </td>
-                      <td className="py-2">
+                      <td className="py-2 pr-2">
                         {formatDate(request.requested_at)}
+                      </td>
+                      <td className="py-2">
+                        <Link
+                          href={`/prestacao-servicos/servicos/${request.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          Ver
+                        </Link>
                       </td>
                     </tr>
                   ))}
