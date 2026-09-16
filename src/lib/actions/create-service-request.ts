@@ -114,8 +114,14 @@ export async function createServiceRequest(
 
   const files = formData
     .getAll("files")
-    .filter((f): f is File => f instanceof File && f.size > 0);
-
+    .filter(
+      (f): f is File =>
+        typeof f === "object" &&
+        f !== null &&
+        "arrayBuffer" in f &&
+        "name" in f &&
+        (f as File).size > 0
+    );
   for (const file of files) {
     const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
 
