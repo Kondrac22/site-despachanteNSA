@@ -2,10 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import WhatsAppButton from "@/components/layout/WhatsAppButton";
-import ScrollToTop from "@/components/layout/ScrollToTop";
+import AppChrome from "@/components/layout/AppChrome";
 
 import "./globals.css";
 
@@ -30,18 +27,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const content = (
-    <>
-      <Header />
-      <main className="min-h-screen">{children}</main>
-      <Footer />
-      <WhatsAppButton />
-      <ScrollToTop />
-      <Toaster />
-      
-    </>
-  );
-
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
@@ -52,7 +37,7 @@ export default function RootLayout({
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning /* ADICIONE ISSO AQUI PARA MATAR O ERRO */
+        suppressHydrationWarning
       >
         <ThemeProvider
           attribute="class"
@@ -60,7 +45,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {content}
+          <AppChrome>{children}</AppChrome>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
