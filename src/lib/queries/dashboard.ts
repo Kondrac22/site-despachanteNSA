@@ -17,9 +17,6 @@ function periodStartDate(period?: string): string | null {
   return date.toISOString();
 }
 
-// Aplica os filtros de solicitante/unidade/tipo/período numa query
-// de service_requests. O filtro de status é aplicado à parte, porque
-// os indicadores precisam da contagem SEM o filtro de status.
 function applyBaseFilters(query: any, filters: DashboardFilters) {
   if (filters.requester) query = query.eq("created_by", filters.requester);
   if (filters.unit) query = query.eq("unit_id", filters.unit);
@@ -77,7 +74,6 @@ export async function getDashboardIndicators(filters: DashboardFilters) {
     countByStatus(),
   ]);
 
-  // Veículos atualmente em estoque: última movimentação de cada veículo é ENTRY.
   const { data: movements } = await supabase
     .from("vehicle_movements")
     .select("vehicle_id, movement_type, created_at")
@@ -102,7 +98,7 @@ export async function getRecentServiceRequests(filters: DashboardFilters) {
   let query = supabase
     .from("service_requests")
     .select(
-      `id, plate, status, requested_at, finished_at,
+      `id, plate, status, requested_at, finished_at, stopped_reason,
        service_types ( name ),
        profiles!service_requests_created_by_fkey ( name ),
        units ( name )`
@@ -124,14 +120,19 @@ export async function getRecentServiceRequests(filters: DashboardFilters) {
 export async function getCurrentStock(limit = 10) {
   const supabase = await createClient();
 
-  const { data: movements } = await supabase
+  const { data: movements, error } = await supabase
     .from("vehicle_movements")
     .select(
       `vehicle_id, movement_type, created_at,
        vehicles ( plate ),
-       profiles ( name )`
+       profiles!vehicle_movements_user_id_fkey ( name )`
     )
     .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("getCurrentStock error:", error.message);
+    return [];
+  }
 
   const lastByVehicle = new Map<string, (typeof movements)[number]>();
   for (const m of movements ?? []) {

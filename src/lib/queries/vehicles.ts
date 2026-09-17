@@ -14,15 +14,20 @@ export async function getCurrentStockList(
 ): Promise<CurrentStockRow[]> {
   const supabase = await createClient();
 
-  const { data: movements } = await supabase
+  const { data: movements, error } = await supabase
     .from("vehicle_movements")
     .select(
       `vehicle_id, movement_type, created_at, service_request_id,
        vehicles ( plate ),
-       profiles ( name ),
+       profiles!vehicle_movements_user_id_fkey ( name ),
        service_requests ( service_types ( name ) )`
     )
     .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("getCurrentStockList error:", error.message);
+    return [];
+  }
 
   // Fica só com o movimento mais recente de cada veículo.
   const lastByVehicle = new Map<string, any>();
@@ -81,15 +86,20 @@ export async function getVehicleHistoryByPlate(rawPlate: string) {
 
   if (!vehicle) return null;
 
-  const { data: movements } = await supabase
+  const { data: movements, error } = await supabase
     .from("vehicle_movements")
     .select(
       `id, movement_type, created_at, service_request_id, is_duplicate_entry,
-       profiles ( name ),
+       profiles!vehicle_movements_user_id_fkey ( name ),
        service_requests ( id, service_types ( name ) )`
     )
     .eq("vehicle_id", vehicle.id)
     .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("getVehicleHistoryByPlate error:", error.message);
+    return { vehicle, stays: [] };
+  }
 
   const list: VehicleMovementEntry[] = (movements ?? []).map((m: any) => ({
     id: m.id,
@@ -108,8 +118,6 @@ export async function getVehicleHistoryByPlate(rawPlate: string) {
   for (const movement of list) {
     if (movement.movementType === "ENTRY") {
       if (openEntry) {
-        // Uma nova entrada chegou sem uma saída registrada antes —
-        // fecha a permanência anterior sem data de saída conhecida.
         stays.push({ entry: openEntry, exit: null, durationDays: null });
       }
       openEntry = movement;
@@ -125,8 +133,6 @@ export async function getVehicleHistoryByPlate(rawPlate: string) {
         });
         openEntry = null;
       } else {
-        // Saída sem entrada correspondente — não deveria acontecer, mas
-        // não deixamos a tela quebrar por causa disso.
         stays.push({ entry: movement, exit: null, durationDays: null });
       }
     }
@@ -135,7 +141,7 @@ export async function getVehicleHistoryByPlate(rawPlate: string) {
     stays.push({ entry: openEntry, exit: null, durationDays: null });
   }
 
-  stays.reverse(); // mais recente primeiro
+  stays.reverse();
 
   return { vehicle, stays };
 }
