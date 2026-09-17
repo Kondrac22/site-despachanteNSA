@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// FASE 13: protege /prestacao-servicos no nível do servidor (não só no frontend).
+// FASE 13: protege /flow no nível do servidor (não só no frontend).
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -31,11 +31,11 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isModuleRoute = pathname.startsWith("/prestacao-servicos");
-  const isLoginRoute = pathname === "/prestacao-servicos/login";
+  const isModuleRoute = pathname.startsWith("/flow");
+  const isLoginRoute = pathname === "/flow/login";
 
   if (isModuleRoute && !isLoginRoute && !user) {
-    const loginUrl = new URL("/prestacao-servicos/login", request.url);
+    const loginUrl = new URL("/flow/login", request.url);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -50,7 +50,7 @@ export async function middleware(request: NextRequest) {
 
     if (!profile || !profile.active) {
       await supabase.auth.signOut();
-      const loginUrl = new URL("/prestacao-servicos/login", request.url);
+      const loginUrl = new URL("/flow/login", request.url);
       loginUrl.searchParams.set("inactive", "1");
       const redirectResponse = NextResponse.redirect(loginUrl);
       // Copia pra resposta de redirect os cookies que o signOut() acabou
@@ -63,7 +63,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isLoginRoute && user) {
-    const dashboardUrl = new URL("/prestacao-servicos", request.url);
+    const dashboardUrl = new URL("/flow", request.url);
     return NextResponse.redirect(dashboardUrl);
   }
 
@@ -71,5 +71,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/prestacao-servicos/:path*"],
+  matcher: ["/flow/:path*"],
 };

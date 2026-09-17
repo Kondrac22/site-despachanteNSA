@@ -99,7 +99,7 @@ export async function createUserAccount(
     };
   }
 
-  revalidatePath("/prestacao-servicos/usuarios");
+  revalidatePath("/flow/usuarios");
   return { success: true };
 }
 
@@ -139,6 +139,6 @@ export async function updateUserProfile(
     return { success: false, error: "Não foi possível atualizar o usuário." };
   }
 
-  revalidatePath("/prestacao-servicos/usuarios");
+  revalidatePath("/flow/usuarios");
   return { success: true };
 }

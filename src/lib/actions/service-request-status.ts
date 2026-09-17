@@ -165,9 +165,9 @@ export async function changeServiceStatus(
     description: newStatus === "PARADO" ? `Motivo: ${reason}` : null,
   });
 
-  revalidatePath(`/prestacao-servicos/servicos/${serviceRequestId}`);
-  revalidatePath("/prestacao-servicos/servicos");
-  revalidatePath("/prestacao-servicos");
+  revalidatePath(`/flow/servicos/${serviceRequestId}`);
+  revalidatePath("/flow/servicos");
+  revalidatePath("/flow");
 
   return {
     success: true,
@@ -232,8 +232,8 @@ export async function confirmDuplicateVehicleEntry(
     description: `Placa ${serviceRequest.plate} — entrada duplicada autorizada`,
   });
 
-  revalidatePath(`/prestacao-servicos/servicos/${serviceRequestId}`);
-  revalidatePath("/prestacao-servicos");
+  revalidatePath(`/flow/servicos/${serviceRequestId}`);
+  revalidatePath("/flow");
 
   return { success: true };
 }

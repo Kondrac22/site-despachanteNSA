@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 
 export type DashboardFilters = {
-  requester?: string; // profiles.id
-  unit?: string; // units.id
-  status?: string; // PARADO | A_FAZER | FINALIZADO
-  serviceType?: string; // service_types.id
-  period?: string; // "7" | "30" | "" (todos)
+  requester?: string;
+  unit?: string;
+  status?: string;
+  serviceType?: string;
+  period?: string;
 };
 
 function periodStartDate(period?: string): string | null {
@@ -98,7 +98,7 @@ export async function getRecentServiceRequests(filters: DashboardFilters) {
   let query = supabase
     .from("service_requests")
     .select(
-      `id, plate, status, requested_at, finished_at, stopped_reason,
+      `id, plate, protocol, status, requested_at, finished_at, stopped_reason,
        service_types ( name ),
        profiles!service_requests_created_by_fkey ( name ),
        units ( name )`

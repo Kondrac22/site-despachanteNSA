@@ -36,7 +36,7 @@ export async function getServiceRequestsList(
   let query = supabase
     .from("service_requests")
     .select(
-      `id, plate, status, requested_at, finished_at,
+      `id, plate, protocol, status, requested_at, finished_at, stopped_reason,
        service_types ( name ),
        profiles!service_requests_created_by_fkey ( name ),
        units ( name )`,
@@ -90,7 +90,8 @@ export async function getServiceRequestDetail(id: string) {
   const { data: serviceRequest, error } = await supabase
     .from("service_requests")
     .select(
-      `id, plate, status, notes, requested_at, finished_at, created_at,
+      `id, plate, protocol, status, notes, requested_at, finished_at, created_at,
+       stopped_reason,
        service_types ( id, name ),
        profiles!service_requests_created_by_fkey ( id, name ),
        units ( id, name )`
@@ -118,8 +119,6 @@ export async function getServiceRequestDetail(id: string) {
       .order("created_at", { ascending: false }),
   ]);
 
-  // Gera um link temporário (5 minutos) para cada arquivo, já que o
-  // bucket é privado — ninguém acessa o arquivo direto pela URL crua.
   const filesWithUrls = await Promise.all(
     (files ?? []).map(async (file) => {
       const { data: signed } = await supabase.storage

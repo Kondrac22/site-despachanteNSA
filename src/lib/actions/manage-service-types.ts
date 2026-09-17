@@ -48,7 +48,7 @@ export async function createServiceType(
     };
   }
 
-  revalidatePath("/prestacao-servicos/tipos-servico");
+  revalidatePath("/flow/tipos-servico");
   return { success: true };
 }
 
@@ -78,6 +78,6 @@ export async function updateServiceType(
     return { success: false, error: "Não foi possível atualizar." };
   }
 
-  revalidatePath("/prestacao-servicos/tipos-servico");
+  revalidatePath("/flow/tipos-servico");
   return { success: true };
 }

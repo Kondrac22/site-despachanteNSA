@@ -12,7 +12,7 @@ export default function AppChrome({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isInternalModule = pathname?.startsWith("/prestacao-servicos");
+  const isInternalModule = pathname?.startsWith("/flow");
 
   if (isInternalModule) {
     // Dentro do módulo interno: sem header/footer/whatsapp do site público.

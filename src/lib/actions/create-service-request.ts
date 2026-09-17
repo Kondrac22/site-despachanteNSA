@@ -13,8 +13,6 @@ export type CreateServiceRequestResult = {
   error: string;
 };
 
-// Se der tudo certo, a função redireciona (redirect()) e nunca retorna
-// um objeto — por isso o tipo de retorno só cobre o caso de erro.
 export async function createServiceRequest(
   formData: FormData
 ): Promise<CreateServiceRequestResult> {
@@ -73,6 +71,36 @@ export async function createServiceRequest(
     return { success: false, error: "Tipo de serviço inválido." };
   }
 
+  // Busca o código da unidade pra gerar o protocolo (ex: MTZ-0001).
+  const { data: unit } = await supabase
+    .from("units")
+    .select("code")
+    .eq("id", profile.unit_id)
+    .single();
+
+  if (!unit?.code) {
+    return {
+      success: false,
+      error:
+        "Sua unidade ainda não tem um código de protocolo configurado. Peça para o administrador configurar em Unidades.",
+    };
+  }
+
+  const { data: nextNumber, error: protocolError } = await supabase.rpc(
+    "increment_unit_protocol",
+    { p_unit_id: profile.unit_id }
+  );
+
+  if (protocolError || nextNumber == null) {
+    console.error("increment_unit_protocol error:", protocolError?.message);
+    return {
+      success: false,
+      error: "Não foi possível gerar o número de protocolo. Tente novamente.",
+    };
+  }
+
+  const protocol = `${unit.code}-${String(nextNumber).padStart(4, "0")}`;
+
   const isAdmin = profile.role === "admin";
   const submittedDate = String(formData.get("requestedAt") ?? "");
   const requestedAt =
@@ -86,6 +114,7 @@ export async function createServiceRequest(
     .from("service_requests")
     .insert({
       plate,
+      protocol,
       service_type_id: serviceTypeId,
       requested_at: requestedAt,
       created_by: profile.id,
@@ -108,31 +137,24 @@ export async function createServiceRequest(
     service_request_id: serviceRequest.id,
     user_id: profile.id,
     action: "CRIADO",
-    description: "Serviço criado",
+    description: `Protocolo ${protocol}`,
     new_value: "A_FAZER",
   });
 
   const files = formData
     .getAll("files")
-    .filter(
-      (f): f is File =>
-        typeof f === "object" &&
-        f !== null &&
-        "arrayBuffer" in f &&
-        "name" in f &&
-        (f as File).size > 0
-    );
+    .filter((f): f is File => f instanceof File && f.size > 0);
+
   for (const file of files) {
     const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
 
     if (!ALLOWED_EXTENSIONS.includes(extension)) {
-      continue; // extensão não permitida: ignora esse arquivo, sem travar os outros
+      continue;
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      continue; // arquivo grande demais: idem
+      continue;
     }
 
-    // Nome interno seguro — nunca confiamos no nome original pra gerar o caminho.
     const safeName = `${Date.now()}-${Math.random()
       .toString(36)
       .slice(2)}.${extension}`;
@@ -164,6 +186,6 @@ export async function createServiceRequest(
     });
   }
 
-  revalidatePath("/prestacao-servicos");
-  redirect("/prestacao-servicos?created=1");
+  revalidatePath("/flow");
+  redirect("/flow?created=1");
 }
