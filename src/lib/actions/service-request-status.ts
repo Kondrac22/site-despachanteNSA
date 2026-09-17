@@ -9,15 +9,15 @@ export type ChangeStatusResult =
   | { success: true; duplicateConfirmNeeded?: boolean; plate?: string }
   | { success: false; error: string };
 
-// Fluxo permitido: A_FAZER <-> PARADO, e A_FAZER -> FINALIZADO.
-// Uma vez FINALIZADO, não é permitido mudar de status novamente.
 const ALLOWED_TRANSITIONS: Record<Status, Status[]> = {
   A_FAZER: ["PARADO", "FINALIZADO"],
   PARADO: ["A_FAZER"],
   FINALIZADO: [],
 };
 
-async function getAuthedProfile(supabase: Awaited<ReturnType<typeof createClient>>) {
+async function getAuthedProfile(
+  supabase: Awaited<ReturnType<typeof createClient>>
+) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -35,7 +35,8 @@ async function getAuthedProfile(supabase: Awaited<ReturnType<typeof createClient
 
 export async function changeServiceStatus(
   serviceRequestId: string,
-  newStatus: Status
+  newStatus: Status,
+  options?: { reason?: string }
 ): Promise<ChangeStatusResult> {
   const supabase = await createClient();
   const profile = await getAuthedProfile(supabase);
@@ -43,12 +44,23 @@ export async function changeServiceStatus(
 
   const { data: serviceRequest } = await supabase
     .from("service_requests")
-    .select("id, plate, status, service_types ( name )")
+    .select("id, plate, status, created_by, service_types ( name )")
     .eq("id", serviceRequestId)
     .single();
 
   if (!serviceRequest) {
     return { success: false, error: "Serviço não encontrado." };
+  }
+
+  // Checagem explícita de permissão — antes disso dependíamos só do
+  // banco recusar silenciosamente, o que podia mostrar "sucesso" sem
+  // nada ter realmente mudado.
+  const isAdmin = profile.role === "admin";
+  if (!isAdmin && serviceRequest.created_by !== profile.id) {
+    return {
+      success: false,
+      error: "Você não tem permissão para alterar este serviço.",
+    };
   }
 
   const currentStatus = serviceRequest.status as Status;
@@ -60,9 +72,19 @@ export async function changeServiceStatus(
     };
   }
 
+  let reason: string | null = null;
+  if (newStatus === "PARADO") {
+    reason = options?.reason?.trim() ?? "";
+    if (reason.length < 3) {
+      return {
+        success: false,
+        error: "Informe o motivo da parada (mínimo 3 caracteres).",
+      };
+    }
+  }
+
   let duplicateConfirmNeeded = false;
 
-  // Integração com o estoque só acontece ao finalizar (FASE 26/27).
   if (newStatus === "FINALIZADO") {
     const typeName: string =
       (serviceRequest as any).service_types?.name ?? "";
@@ -96,8 +118,6 @@ export async function changeServiceStatus(
       const isActive = lastMovement?.movement_type === "ENTRY";
 
       if (isExit && !isActive) {
-        // Bloqueia a finalização: não dá pra tirar do estoque um veículo
-        // que não está lá.
         return {
           success: false,
           error: "Este veículo não está ativo no estoque no momento.",
@@ -105,8 +125,6 @@ export async function changeServiceStatus(
       }
 
       if (isEntry && isActive) {
-        // Não insere agora — espera a confirmação do usuário (alerta de
-        // duplicidade). O serviço é finalizado normalmente de qualquer forma.
         duplicateConfirmNeeded = true;
       } else {
         await supabase.from("vehicle_movements").insert({
@@ -134,6 +152,7 @@ export async function changeServiceStatus(
       status: newStatus,
       updated_at: new Date().toISOString(),
       finished_at: finishedAt,
+      stopped_reason: newStatus === "PARADO" ? reason : null,
     })
     .eq("id", serviceRequestId);
 
@@ -143,13 +162,18 @@ export async function changeServiceStatus(
     action: "STATUS_ALTERADO",
     old_value: currentStatus,
     new_value: newStatus,
+    description: newStatus === "PARADO" ? `Motivo: ${reason}` : null,
   });
 
   revalidatePath(`/prestacao-servicos/servicos/${serviceRequestId}`);
   revalidatePath("/prestacao-servicos/servicos");
   revalidatePath("/prestacao-servicos");
 
-  return { success: true, duplicateConfirmNeeded, plate: serviceRequest.plate };
+  return {
+    success: true,
+    duplicateConfirmNeeded,
+    plate: serviceRequest.plate,
+  };
 }
 
 export async function confirmDuplicateVehicleEntry(
@@ -161,12 +185,20 @@ export async function confirmDuplicateVehicleEntry(
 
   const { data: serviceRequest } = await supabase
     .from("service_requests")
-    .select("id, plate")
+    .select("id, plate, created_by")
     .eq("id", serviceRequestId)
     .single();
 
   if (!serviceRequest) {
     return { success: false, error: "Serviço não encontrado." };
+  }
+
+  const isAdmin = profile.role === "admin";
+  if (!isAdmin && serviceRequest.created_by !== profile.id) {
+    return {
+      success: false,
+      error: "Você não tem permissão para alterar este serviço.",
+    };
   }
 
   let { data: vehicle } = await supabase

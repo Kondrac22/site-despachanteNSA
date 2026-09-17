@@ -26,7 +26,13 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
     { href: "/prestacao-servicos/estoque", label: "Estoque de Veículos" },
     { href: "/prestacao-servicos/historico", label: "Histórico" },
     ...(isAdmin
-      ? [{ href: "/prestacao-servicos/usuarios", label: "Usuários" }]
+      ? [
+          { href: "/prestacao-servicos/usuarios", label: "Usuários" },
+          {
+            href: "/prestacao-servicos/tipos-servico",
+            label: "Tipos de Serviço",
+          },
+        ]
       : []),
   ];
 
