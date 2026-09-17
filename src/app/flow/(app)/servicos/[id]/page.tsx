@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -7,6 +7,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import StatusActions from "@/components/flow/StatusActions";
+import DeleteServiceButton from "@/components/flow/DeleteServiceButton";
+import { createClient } from "@/lib/supabase/server";
 import { getServiceRequestDetail } from "@/lib/queries/service-requests";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -41,11 +43,25 @@ export default async function ServiceDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const detail = await getServiceRequestDetail(id);
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/flow/login");
+
+  const { data: currentProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  const isAdmin = currentProfile?.role === "admin";
+
+  const detail = await getServiceRequestDetail(id);
   if (!detail) notFound();
 
   const { serviceRequest, files, history } = detail;
+  const canDelete = isAdmin && serviceRequest.status !== "FINALIZADO";
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6 p-6">
@@ -57,7 +73,16 @@ export default async function ServiceDetailPage({
           ← Voltar para Serviços
         </Link>
         <h1 className="mt-2 text-2xl font-semibold">
-          Serviço — {serviceRequest.plate}
+          {serviceRequest.protocol ? (
+            <>
+              Serviço {serviceRequest.protocol}{" "}
+              <span className="text-muted-foreground">
+                — {serviceRequest.plate}
+              </span>
+            </>
+          ) : (
+            <>Serviço — {serviceRequest.plate}</>
+          )}
         </h1>
       </div>
 
@@ -66,6 +91,12 @@ export default async function ServiceDetailPage({
           <CardTitle>Detalhes</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <p className="text-xs text-muted-foreground">Protocolo</p>
+            <p className="font-mono font-medium">
+              {serviceRequest.protocol ?? "—"}
+            </p>
+          </div>
           <div>
             <p className="text-xs text-muted-foreground">Placa</p>
             <p className="font-medium">{serviceRequest.plate}</p>
@@ -113,6 +144,22 @@ export default async function ServiceDetailPage({
         </CardContent>
       </Card>
 
+      {serviceRequest.status === "PARADO" &&
+        (serviceRequest as any).stopped_reason && (
+          <Card className="border-red-300">
+            <CardHeader>
+              <CardTitle className="text-red-700">
+                Motivo da parada
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="whitespace-pre-wrap text-sm">
+                {(serviceRequest as any).stopped_reason}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
       <Card>
         <CardHeader>
           <CardTitle>Ações</CardTitle>
@@ -120,7 +167,9 @@ export default async function ServiceDetailPage({
         <CardContent>
           <StatusActions
             serviceRequestId={serviceRequest.id}
-            status={serviceRequest.status as "PARADO" | "A_FAZER" | "FINALIZADO"}
+            status={
+              serviceRequest.status as "PARADO" | "A_FAZER" | "FINALIZADO"
+            }
             plate={serviceRequest.plate}
           />
         </CardContent>
@@ -214,6 +263,26 @@ export default async function ServiceDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {canDelete && (
+        <Card className="border-destructive/40">
+          <CardHeader>
+            <CardTitle className="text-destructive">Zona de perigo</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Excluir remove o serviço, seus documentos e seu histórico
+              permanentemente. Só é possível excluir serviços que ainda não
+              foram finalizados.
+            </p>
+            <DeleteServiceButton
+              serviceRequestId={serviceRequest.id}
+              protocol={serviceRequest.protocol}
+              plate={serviceRequest.plate}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

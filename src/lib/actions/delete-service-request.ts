@@ -53,8 +53,6 @@ export async function deleteServiceRequest(
     };
   }
 
-  // Segurança extra: se por algum motivo já existir movimentação de
-  // estoque ligada a esse serviço, não deixa excluir.
   const { count: movementCount } = await supabase
     .from("vehicle_movements")
     .select("id", { count: "exact", head: true })
@@ -68,7 +66,8 @@ export async function deleteServiceRequest(
     };
   }
 
-  // Apaga os documentos do Storage antes de apagar os metadados.
+  // Apaga os documentos de verdade (arquivo + metadados) — isso continua
+  // sendo removido, diferente do histórico.
   const { data: files } = await supabase
     .from("service_files")
     .select("storage_path")
@@ -84,13 +83,21 @@ export async function deleteServiceRequest(
     .from("service_files")
     .delete()
     .eq("service_request_id", serviceRequestId);
-  await supabase
-    .from("service_history")
-    .delete()
-    .eq("service_request_id", serviceRequestId);
 
-  // Guarda um rastro permanente de que isso foi excluído, por quem e
-  // quando — mesmo apagando o serviço em si.
+  // Registra o evento de exclusão ANTES de apagar o serviço, enquanto o
+  // vínculo com service_request_id ainda é válido. Depois que o serviço
+  // for excluído, esta linha (e todas as outras do histórico dele) ficam
+  // "órfãs" automaticamente — sem sumir, só sem o vínculo, já que o
+  // serviço não existe mais.
+  await supabase.from("service_history").insert({
+    service_request_id: serviceRequestId,
+    user_id: admin.id,
+    action: "EXCLUIDO",
+    old_value: serviceRequest.status,
+    description: `Protocolo ${serviceRequest.protocol ?? "sem protocolo"} — Placa ${serviceRequest.plate}`,
+  });
+
+  // Rastro extra e independente (não aparece na tela, mas fica guardado).
   await supabase.from("service_request_deletions").insert({
     original_service_request_id: serviceRequest.id,
     plate: serviceRequest.plate,
@@ -110,5 +117,6 @@ export async function deleteServiceRequest(
 
   revalidatePath("/flow/servicos");
   revalidatePath("/flow");
+  revalidatePath("/flow/historico");
   return { success: true };
 }

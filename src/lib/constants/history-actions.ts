@@ -7,4 +7,5 @@ export const ACTION_OPTIONS = [
   { id: "ENTRADA_ESTOQUE", name: "Entrada no estoque" },
   { id: "ENTRADA_DUPLICADA", name: "Entrada duplicada" },
   { id: "SAIDA_ESTOQUE", name: "Saída do estoque" },
+  { id: "EXCLUIDO", name: "Pedido excluído" },
 ];
