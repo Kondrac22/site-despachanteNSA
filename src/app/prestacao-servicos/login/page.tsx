@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,10 +15,19 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("inactive") === "1") {
+      setError(
+        "Sua conta foi desativada. Fale com o administrador para reativar o acesso."
+      );
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,15 +35,30 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    setLoading(false);
-
-    if (error) {
+    if (signInError || !data.user) {
+      setLoading(false);
       setError("E-mail ou senha inválidos.");
+      return;
+    }
+
+    // Login funcionou no Auth, mas ainda falta checar se a conta está ativa.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("active")
+      .eq("id", data.user.id)
+      .single();
+
+    if (!profile || !profile.active) {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError(
+        "Sua conta está desativada. Fale com o administrador para reativar o acesso."
+      );
       return;
     }
 

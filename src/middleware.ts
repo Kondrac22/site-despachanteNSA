@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Protege /prestacao-servicos no nível do servidor (não só no frontend).
+// FASE 13: protege /prestacao-servicos no nível do servidor (não só no frontend).
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -37,6 +37,29 @@ export async function middleware(request: NextRequest) {
   if (isModuleRoute && !isLoginRoute && !user) {
     const loginUrl = new URL("/prestacao-servicos/login", request.url);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Usuário está logado, mas pode ter sido desativado depois do login —
+  // checa a cada navegação e derruba a sessão se for o caso.
+  if (isModuleRoute && !isLoginRoute && user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("active")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || !profile.active) {
+      await supabase.auth.signOut();
+      const loginUrl = new URL("/prestacao-servicos/login", request.url);
+      loginUrl.searchParams.set("inactive", "1");
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      // Copia pra resposta de redirect os cookies que o signOut() acabou
+      // de limpar (senão a sessão "morta" continuaria valendo).
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie);
+      });
+      return redirectResponse;
+    }
   }
 
   if (isLoginRoute && user) {

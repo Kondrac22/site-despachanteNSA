@@ -44,20 +44,35 @@ type UsersManagerProps = {
   currentUserId: string;
 };
 
+// Ativos primeiro; dentro de cada grupo, ordem alfabética pelo nome.
+function sortUsers(list: UserRow[]) {
+  return [...list].sort((a, b) => {
+    if (a.active !== b.active) return a.active ? -1 : 1;
+    return a.name.localeCompare(b.name, "pt-BR");
+  });
+}
+
 export default function UsersManager({
   initialUsers,
   units,
   currentUserId,
 }: UsersManagerProps) {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState(() => sortUsers(initialUsers));
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  function applyLocalChange(userId: string, changes: Partial<UserRow>) {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, ...changes } : u))
-    );
+  function applyLocalChange(
+    userId: string,
+    changes: Partial<UserRow>,
+    resort = false
+  ) {
+    setUsers((prev) => {
+      const updated = prev.map((u) =>
+        u.id === userId ? { ...u, ...changes } : u
+      );
+      return resort ? sortUsers(updated) : updated;
+    });
   }
 
   async function handleRoleChange(userId: string, role: "admin" | "user") {
@@ -93,11 +108,12 @@ export default function UsersManager({
   }
 
   async function handleToggleActive(userId: string, current: boolean) {
-    applyLocalChange(userId, { active: !current });
+    // Reordena junto: ativar/desativar muda de grupo na lista.
+    applyLocalChange(userId, { active: !current }, true);
     const result = await updateUserProfile(userId, { active: !current });
     if (!result.success) {
       toast.error(result.error);
-      applyLocalChange(userId, { active: current });
+      applyLocalChange(userId, { active: current }, true);
     } else {
       toast.success(!current ? "Usuário ativado." : "Usuário desativado.");
     }

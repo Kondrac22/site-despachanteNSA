@@ -26,7 +26,9 @@ export default async function UsuariosPage() {
     supabase
       .from("profiles")
       .select("id, name, email, role, active, unit_id, units ( name )")
-      .order("name"),
+      // Ativos primeiro; dentro de cada grupo, ordem alfabética pelo nome.
+      .order("active", { ascending: false })
+      .order("name", { ascending: true }),
     supabase
       .from("units")
       .select("id, name")
