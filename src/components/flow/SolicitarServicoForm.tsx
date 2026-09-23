@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +21,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createServiceRequest } from "@/lib/actions/create-service-request";
+import { uploadServiceFiles, validateFiles } from "@/lib/upload-service-files";
+import { ACCEPT_ATTRIBUTE } from "@/lib/constants/files";
 
 type ServiceType = { id: string; name: string; document_checklist: string[] };
 
@@ -33,6 +37,7 @@ export default function SolicitarServicoForm({
   isAdmin,
   todayIso,
 }: SolicitarServicoFormProps) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [serviceTypeId, setServiceTypeId] = useState("");
@@ -65,17 +70,53 @@ export default function SolicitarServicoForm({
       return;
     }
 
-    setSubmitting(true);
-
     const formData = new FormData(e.currentTarget);
+
+    // Os arquivos não vão junto com o formulário (a server action tem
+    // limite de 1 MB): o serviço é criado primeiro e depois os arquivos
+    // vão direto pro Storage. Um campo de arquivo vazio vem como um
+    // arquivo de tamanho 0, por isso o filtro.
+    const files = formData
+      .getAll("files")
+      .filter(
+        (f): f is File =>
+          typeof f === "object" && "arrayBuffer" in f && f.size > 0
+      );
+    formData.delete("files");
+
+    const validation = validateFiles(files);
+    if (!validation.success) {
+      setError(validation.error);
+      return;
+    }
+
+    setSubmitting(true);
     const result = await createServiceRequest(formData);
 
-    // Se a função chegou a redirecionar (sucesso), o navegador já saiu
-    // desta página antes de o código abaixo rodar. Se voltou aqui, é erro.
-    if (result && result.success === false) {
+    if (!result.success) {
       setError(result.error);
       setSubmitting(false);
+      return;
     }
+
+    if (files.length > 0) {
+      const upload = await uploadServiceFiles(
+        result.serviceRequestId,
+        "SOLICITACAO",
+        files
+      );
+      if (!upload.success) {
+        // O serviço já existe: leva pra página dele, onde dá pra anexar
+        // de novo em "Documentos da solicitação".
+        toast.error(
+          `Serviço criado, mas o envio dos documentos falhou: ${upload.error} Anexe novamente na página do serviço.`
+        );
+        router.push(`/flow/servicos/${result.serviceRequestId}`);
+        return;
+      }
+    }
+
+    router.push("/flow?created=1");
   }
 
   return (
@@ -190,7 +231,7 @@ export default function SolicitarServicoForm({
               name="files"
               type="file"
               multiple
-              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              accept={ACCEPT_ATTRIBUTE}
             />
             <p className="text-xs text-muted-foreground">
               PDF, JPG, PNG, DOC ou DOCX — até 10 MB por arquivo.

@@ -11,6 +11,7 @@ import DeleteServiceButton from "@/components/flow/DeleteServiceButton";
 import EditServiceDialog from "@/components/flow/EditServiceDialog";
 import UrgentBadge from "@/components/flow/UrgentBadge";
 import UrgentToggle from "@/components/flow/UrgentToggle";
+import AttachServiceFiles from "@/components/flow/AttachServiceFiles";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceRequestDetail } from "@/lib/queries/service-requests";
 
@@ -24,6 +25,7 @@ const ACTION_LABEL: Record<string, string> = {
   CRIADO: "Serviço criado",
   STATUS_ALTERADO: "Status alterado",
   DOCUMENTO_ANEXADO: "Documento anexado",
+  DOCUMENTO_ENTREGUE: "Documento de conclusão anexado",
   ENTRADA_ESTOQUE: "Entrada no estoque",
   ENTRADA_DUPLICADA: "Entrada duplicada autorizada",
   SAIDA_ESTOQUE: "Saída do estoque",
@@ -74,9 +76,15 @@ export default async function ServiceDetailPage({
   const canEdit = canDelete;
   const isOpen = serviceRequest.status !== "FINALIZADO";
   const isUrgent = Boolean(serviceRequest.is_urgent) && isOpen;
-  const canToggleUrgent =
-    isOpen &&
-    (isAdmin || (serviceRequest as any).profiles?.id === user.id);
+  // Mesma regra da mudança de status: admin ou quem criou o serviço.
+  const canManage =
+    isAdmin || (serviceRequest as any).profiles?.id === user.id;
+  const canToggleUrgent = isOpen && canManage;
+  const canAttachConclusion =
+    serviceRequest.status === "FINALIZADO" && canManage;
+  const canAttachRequest = isOpen && canManage;
+  const conclusionFiles = files.filter((f: any) => f.category === "CONCLUSAO");
+  const requestFiles = files.filter((f: any) => f.category !== "CONCLUSAO");
   const currentType = (serviceRequest as any).service_types as {
     id: string;
     name: string;
@@ -94,6 +102,40 @@ export default async function ServiceDetailPage({
     if (currentType && !editableTypes.some((t) => t.id === currentType.id)) {
       editableTypes = [currentType, ...editableTypes];
     }
+  }
+
+  function renderFiles(list: typeof files) {
+    return (
+      <ul className="space-y-2">
+        {list.map((file) => (
+          <li
+            key={file.id}
+            className="flex items-center justify-between rounded-md border p-2 text-sm"
+          >
+            <span>
+              {file.original_name}{" "}
+              <span className="text-xs text-muted-foreground">
+                ({formatBytes(file.size_bytes)})
+              </span>
+            </span>
+            {file.url ? (
+              <a
+                href={file.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+              >
+                Baixar
+              </a>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                Link indisponível
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    );
   }
 
   return (
@@ -253,45 +295,46 @@ export default async function ServiceDetailPage({
         </Card>
       )}
 
+      {(conclusionFiles.length > 0 || canAttachConclusion) && (
+        <Card className="border-green-300">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-green-700">Documentos entregues</CardTitle>
+            {canAttachConclusion && (
+              <AttachServiceFiles
+                serviceRequestId={serviceRequest.id}
+                category="CONCLUSAO"
+              />
+            )}
+          </CardHeader>
+          <CardContent>
+            {conclusionFiles.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhum documento de conclusão anexado.
+              </p>
+            ) : (
+              renderFiles(conclusionFiles)
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
-        <CardHeader>
-          <CardTitle>Documentos</CardTitle>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+          <CardTitle>Documentos da solicitação</CardTitle>
+          {canAttachRequest && (
+            <AttachServiceFiles
+              serviceRequestId={serviceRequest.id}
+              category="SOLICITACAO"
+            />
+          )}
         </CardHeader>
         <CardContent>
-          {files.length === 0 ? (
+          {requestFiles.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Nenhum documento anexado.
             </p>
           ) : (
-            <ul className="space-y-2">
-              {files.map((file) => (
-                <li
-                  key={file.id}
-                  className="flex items-center justify-between rounded-md border p-2 text-sm"
-                >
-                  <span>
-                    {file.original_name}{" "}
-                    <span className="text-xs text-muted-foreground">
-                      ({formatBytes(file.size_bytes)})
-                    </span>
-                  </span>
-                  {file.url ? (
-                    <a
-                      href={file.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-primary hover:underline"
-                    >
-                      Baixar
-                    </a>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      Link indisponível
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
+            renderFiles(requestFiles)
           )}
         </CardContent>
       </Card>

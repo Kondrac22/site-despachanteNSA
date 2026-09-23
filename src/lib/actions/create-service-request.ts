@@ -1,17 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isValidPlate, normalizePlate } from "@/lib/validation/plate";
 
-const ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "doc", "docx"];
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
-
-export type CreateServiceRequestResult = {
-  success: false;
-  error: string;
-};
+// Os documentos não passam por aqui: depois de criar o serviço, o
+// navegador envia os arquivos direto pro Storage (a server action tem
+// limite de 1 MB por requisição) e registra com registerServiceFiles.
+export type CreateServiceRequestResult =
+  | { success: true; serviceRequestId: string }
+  | { success: false; error: string };
 
 export async function createServiceRequest(
   formData: FormData
@@ -161,58 +159,6 @@ export async function createServiceRequest(
     new_value: "A_FAZER",
   });
 
-    const files = formData
-    .getAll("files")
-    .filter(
-      (f): f is File =>
-        typeof f === "object" &&
-        f !== null &&
-        "arrayBuffer" in f &&
-        "name" in f &&
-        (f as File).size > 0
-    );
-
-  for (const file of files) {
-    const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-
-    if (!ALLOWED_EXTENSIONS.includes(extension)) {
-      continue;
-    }
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      continue;
-    }
-
-    const safeName = `${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2)}.${extension}`;
-    const storagePath = `${serviceRequest.id}/${safeName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("service-documents")
-      .upload(storagePath, file, { contentType: file.type });
-
-    if (uploadError) {
-      console.error("upload error:", uploadError.message);
-      continue;
-    }
-
-    await supabase.from("service_files").insert({
-      service_request_id: serviceRequest.id,
-      original_name: file.name,
-      storage_path: storagePath,
-      mime_type: file.type || "application/octet-stream",
-      size_bytes: file.size,
-      uploaded_by: profile.id,
-    });
-
-    await supabase.from("service_history").insert({
-      service_request_id: serviceRequest.id,
-      user_id: profile.id,
-      action: "DOCUMENTO_ANEXADO",
-      description: file.name,
-    });
-  }
-
   revalidatePath("/flow");
-  redirect("/flow?created=1");
+  return { success: true, serviceRequestId: serviceRequest.id };
 }

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +29,8 @@ import {
   changeServiceStatus,
   confirmDuplicateVehicleEntry,
 } from "@/lib/actions/service-request-status";
+import { uploadServiceFiles } from "@/lib/upload-service-files";
+import { ACCEPT_ATTRIBUTE } from "@/lib/constants/files";
 
 type StatusActionsProps = {
   serviceRequestId: string;
@@ -46,6 +49,8 @@ export default function StatusActions({
   const [showStopDialog, setShowStopDialog] = useState(false);
   const [stopReason, setStopReason] = useState("");
   const [stopError, setStopError] = useState<string | null>(null);
+  const [showFinishDialog, setShowFinishDialog] = useState(false);
+  const [finishFiles, setFinishFiles] = useState<File[]>([]);
 
   async function handleChange(
     newStatus: "PARADO" | "A_FAZER" | "FINALIZADO",
@@ -83,6 +88,35 @@ export default function StatusActions({
     }
   }
 
+  // Finaliza primeiro e só depois anexa: se a finalização for recusada
+  // (ex: saída de veículo que não está no estoque), nenhum arquivo é
+  // enviado à toa. Se o anexo falhar, o serviço continua finalizado e o
+  // documento pode ser anexado depois, pelo card de Documentos.
+  async function handleConfirmFinish() {
+    const ok = await handleChange("FINALIZADO");
+    if (!ok) return;
+    setShowFinishDialog(false);
+
+    if (finishFiles.length > 0) {
+      setLoading(true);
+      const result = await uploadServiceFiles(
+        serviceRequestId,
+        "CONCLUSAO",
+        finishFiles
+      );
+      setLoading(false);
+      if (!result.success) {
+        toast.error(
+          `Serviço finalizado, mas o anexo falhou: ${result.error} Tente anexar de novo em Documentos.`
+        );
+      } else {
+        toast.success("Documento de conclusão anexado.");
+      }
+      router.refresh();
+    }
+    setFinishFiles([]);
+  }
+
   async function handleConfirmDuplicate() {
     setLoading(true);
     const result = await confirmDuplicateVehicleEntry(serviceRequestId);
@@ -108,7 +142,7 @@ export default function StatusActions({
           >
             Marcar como Parado
           </Button>
-          <Button disabled={loading} onClick={() => handleChange("FINALIZADO")}>
+          <Button disabled={loading} onClick={() => setShowFinishDialog(true)}>
             Finalizar Serviço
           </Button>
         </>
@@ -173,6 +207,54 @@ export default function StatusActions({
             </Button>
             <Button disabled={loading} onClick={handleConfirmStop}>
               Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Popup: finalizar, com anexo opcional do documento emitido */}
+      <Dialog
+        open={showFinishDialog}
+        onOpenChange={(open) => {
+          if (loading) return;
+          setShowFinishDialog(open);
+          if (!open) setFinishFiles([]);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Finalizar serviço</DialogTitle>
+            <DialogDescription>
+              Se o serviço gerou algum documento (ex: CRLV emitido), anexe
+              aqui para que o solicitante tenha acesso a ele na página do
+              serviço.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Label htmlFor="finish-files">Documentos entregues (opcional)</Label>
+            <Input
+              id="finish-files"
+              type="file"
+              multiple
+              accept={ACCEPT_ATTRIBUTE}
+              onChange={(e) => setFinishFiles(Array.from(e.target.files ?? []))}
+            />
+            <p className="text-xs text-muted-foreground">
+              PDF, JPG, PNG, DOC ou DOCX — até 10 MB por arquivo.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={loading}
+              onClick={() => setShowFinishDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button disabled={loading} onClick={handleConfirmFinish}>
+              {loading ? "Finalizando..." : "Finalizar"}
             </Button>
           </DialogFooter>
         </DialogContent>

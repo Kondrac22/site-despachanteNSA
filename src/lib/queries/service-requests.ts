@@ -111,7 +111,7 @@ export async function getServiceRequestDetail(id: string) {
     supabase
       .from("service_files")
       .select(
-        "id, original_name, storage_path, mime_type, size_bytes, created_at"
+        "id, original_name, storage_path, mime_type, size_bytes, created_at, category"
       )
       .eq("service_request_id", id)
       .order("created_at", { ascending: false }),
