@@ -27,9 +27,9 @@ export default async function TiposServicoPage() {
     .order("name");
 
   return (
-    <div className="container mx-auto max-w-3xl space-y-6 p-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Tipos de Serviço</h1>
+        <h2 className="text-lg font-semibold">Tipos de Serviço</h2>
         <p className="text-sm text-muted-foreground">
           Gerencie as opções que aparecem no formulário de Solicitar
           Serviço.

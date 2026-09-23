@@ -56,7 +56,7 @@ export async function createUnit(formData: FormData): Promise<ActionResult> {
     return { success: false, error: "Não foi possível criar a unidade." };
   }
 
-  revalidatePath("/flow/unidades");
+  revalidatePath("/flow/configuracoes/unidades");
   return { success: true };
 }
 
@@ -95,6 +95,6 @@ export async function updateUnit(
     return { success: false, error: "Não foi possível atualizar." };
   }
 
-  revalidatePath("/flow/unidades");
+  revalidatePath("/flow/configuracoes/unidades");
   return { success: true };
 }

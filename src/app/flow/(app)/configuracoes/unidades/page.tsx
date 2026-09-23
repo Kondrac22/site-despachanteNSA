@@ -27,9 +27,9 @@ export default async function UnidadesPage() {
     .order("name");
 
   return (
-    <div className="container mx-auto max-w-3xl space-y-6 p-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Unidades</h1>
+        <h2 className="text-lg font-semibold">Unidades</h2>
         <p className="text-sm text-muted-foreground">
           Cada unidade tem um código curto usado no número de protocolo dos
           serviços (ex: MTZ-0001).

@@ -4,6 +4,15 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Usuários, Tipos de Serviço e Unidades foram movidos para dentro de
+  // Configurações — mantém os links/favoritos antigos funcionando.
+  async redirects() {
+    return ["usuarios", "tipos-servico", "unidades"].map((page) => ({
+      source: `/flow/${page}`,
+      destination: `/flow/configuracoes/${page}`,
+      permanent: true,
+    }));
+  },
   async headers() {
     return [
       {

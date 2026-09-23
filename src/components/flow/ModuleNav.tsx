@@ -28,16 +28,18 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
     { href: "/flow/historico", label: "Histórico" },
     ...(isAdmin
       ? [
-          { href: "/flow/usuarios", label: "Usuários" },
-          {
-            href: "/flow/tipos-servico",
-            label: "Tipos de Serviço",
-          },
-          { href: "/flow/unidades", label: "Unidades" },
           { href: "/flow/financeiro", label: "Financeiro" },
+          { href: "/flow/configuracoes", label: "Configurações" },
         ]
       : []),
   ];
+
+  // Também marca o item como ativo nas subpáginas (ex: as abas de
+  // Configurações). O Dashboard ("/flow") só quando é exatamente ele.
+  function isActive(href: string) {
+    if (href === "/flow") return pathname === href;
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -63,7 +65,7 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
               href={link.href}
               className={cn(
                 "text-sm font-medium transition-colors hover:text-primary",
-                pathname === link.href
+                isActive(link.href)
                   ? "text-primary"
                   : "text-muted-foreground"
               )}
