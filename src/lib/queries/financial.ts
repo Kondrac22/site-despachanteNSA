@@ -16,6 +16,50 @@ export type FinancialUnitTotal = {
   total: number;
 };
 
+export const MONTHS = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
+function currentYearMonth() {
+  // Mês atual no horário de Brasília (o servidor roda em UTC).
+  const [year, month] = new Date()
+    .toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" })
+    .split("-")
+    .map(Number);
+  return { year, month };
+}
+
+// Lê o mês/ano do filtro (?month=&year=); valor ausente ou inválido vira
+// o mês atual. Usado pela página e pela exportação, pra baterem sempre.
+export function resolvePeriod(params: {
+  month?: string | null;
+  year?: string | null;
+}) {
+  const now = currentYearMonth();
+  const month = Number(params.month);
+  const year = Number(params.year);
+  return {
+    currentYear: now.year,
+    month:
+      Number.isInteger(month) && month >= 1 && month <= 12 ? month : now.month,
+    year:
+      Number.isInteger(year) && year >= 2000 && year <= now.year + 1
+        ? year
+        : now.year,
+  };
+}
+
 // O Brasil não tem mais horário de verão, então o fuso é sempre -03:00.
 function monthRange(year: number, month: number) {
   const pad = (n: number) => String(n).padStart(2, "0");

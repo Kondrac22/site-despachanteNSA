@@ -9,22 +9,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/server";
-import { getFinancialReport } from "@/lib/queries/financial";
-
-const MONTHS = [
-  "Janeiro",
-  "Fevereiro",
-  "Março",
-  "Abril",
-  "Maio",
-  "Junho",
-  "Julho",
-  "Agosto",
-  "Setembro",
-  "Outubro",
-  "Novembro",
-  "Dezembro",
-];
+import {
+  MONTHS,
+  getFinancialReport,
+  resolvePeriod,
+} from "@/lib/queries/financial";
 
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -34,15 +23,6 @@ function formatDate(value: string) {
   return new Date(value).toLocaleDateString("pt-BR", {
     timeZone: "America/Sao_Paulo",
   });
-}
-
-function currentYearMonth() {
-  // Mês atual no horário de Brasília (o servidor roda em UTC).
-  const [year, month] = new Date()
-    .toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" })
-    .split("-")
-    .map(Number);
-  return { year, month };
 }
 
 export default async function FinanceiroPage({
@@ -67,17 +47,13 @@ export default async function FinanceiroPage({
   }
 
   const params = await searchParams;
-  const now = currentYearMonth();
-  const month = Number(params.month);
-  const year = Number(params.year);
-  const selectedMonth =
-    Number.isInteger(month) && month >= 1 && month <= 12 ? month : now.month;
-  const selectedYear =
-    Number.isInteger(year) && year >= 2000 && year <= now.year + 1
-      ? year
-      : now.year;
+  const {
+    month: selectedMonth,
+    year: selectedYear,
+    currentYear,
+  } = resolvePeriod(params);
 
-  const yearOptions = Array.from({ length: 5 }, (_, i) => now.year - i);
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
   const { rows, unitTotals, total, missingPriceCount } =
     await getFinancialReport(selectedYear, selectedMonth);
@@ -86,11 +62,22 @@ export default async function FinanceiroPage({
 
   return (
     <div className="container mx-auto max-w-5xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Financeiro</h1>
-        <p className="text-sm text-muted-foreground">
-          Valores dos serviços finalizados no período, por unidade.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Financeiro</h1>
+          <p className="text-sm text-muted-foreground">
+            Valores dos serviços finalizados no período, por unidade.
+          </p>
+        </div>
+        {/* <a> em vez de <Link>: é um download, não uma navegação. */}
+        <Button asChild variant="outline">
+          <a
+            href={`/flow/financeiro/exportar?month=${selectedMonth}&year=${selectedYear}`}
+            download
+          >
+            Exportar para Excel
+          </a>
+        </Button>
       </div>
 
       <form className="flex flex-wrap gap-2" action="/flow/financeiro">
