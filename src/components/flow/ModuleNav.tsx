@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import GlobalSearch from "@/components/flow/GlobalSearch";
 
 type ModuleNavProps = {
   isAdmin: boolean;
@@ -33,6 +34,7 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
             label: "Tipos de Serviço",
           },
           { href: "/flow/unidades", label: "Unidades" },
+          { href: "/flow/financeiro", label: "Financeiro" },
         ]
       : []),
   ];
@@ -71,42 +73,46 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
           ))}
         </nav>
 
-        <div className="hidden md:flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{userName}</span>
-          <Button variant="ghost" size="icon" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4" />
-            <span className="sr-only">Sair</span>
-          </Button>
-        </div>
+        <div className="flex items-center gap-2 md:gap-4">
+          <GlobalSearch />
 
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="icon">
-              <Menu className="h-6 w-6" />
-              <span className="sr-only">Abrir menu</span>
+          <div className="hidden md:flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">{userName}</span>
+            <Button variant="ghost" size="icon" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4" />
+              <span className="sr-only">Sair</span>
             </Button>
-          </SheetTrigger>
-          <SheetContent side="right">
-            <nav className="flex flex-col space-y-4 mt-8">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setIsOpen(false)}
-                  className="text-lg font-medium transition-colors hover:text-primary"
+          </div>
+
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Abrir menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right">
+              <nav className="flex flex-col space-y-4 mt-8">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setIsOpen(false)}
+                    className="text-lg font-medium transition-colors hover:text-primary"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                <button
+                  onClick={handleSignOut}
+                  className="text-left text-lg font-medium text-destructive"
                 >
-                  {link.label}
-                </Link>
-              ))}
-              <button
-                onClick={handleSignOut}
-                className="text-left text-lg font-medium text-destructive"
-              >
-                Sair
-              </button>
-            </nav>
-          </SheetContent>
-        </Sheet>
+                  Sair
+                </button>
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   );

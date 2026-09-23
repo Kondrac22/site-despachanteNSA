@@ -33,6 +33,8 @@ const PERIOD_OPTIONS = [
   { id: "30", name: "Últimos 30 dias" },
 ];
 
+const URGENT_OPTIONS = [{ id: "1", name: "🚨 Só urgentes" }];
+
 const SORT_OPTIONS = [
   { id: "recent", name: "Mais recente" },
   { id: "oldest", name: "Mais antigo" },
@@ -136,6 +138,11 @@ export default function ServiceListFilters({
           paramKey="serviceType"
           placeholder="Tipo de Serviço"
           options={serviceTypes}
+        />
+        <FilterSelect
+          paramKey="urgent"
+          placeholder="Urgência"
+          options={URGENT_OPTIONS}
         />
         <FilterSelect
           paramKey="sort"

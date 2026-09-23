@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,71 @@ import {
   updateServiceType,
 } from "@/lib/actions/manage-service-types";
 
-type ServiceType = { id: string; name: string; active: boolean };
+type ServiceType = {
+  id: string;
+  name: string;
+  active: boolean;
+  price: number;
+  document_checklist: string[];
+};
+
+function formatCurrency(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function formatPriceInput(value: number) {
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function ServiceTypeFields({ type }: { type?: ServiceType }) {
+  const prefix = type ? `edit-${type.id}` : "create";
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor={`${prefix}-name`}>Nome *</Label>
+        <Input
+          id={`${prefix}-name`}
+          name="name"
+          required
+          defaultValue={type?.name}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${prefix}-price`}>Valor cobrado (R$)</Label>
+        <Input
+          id={`${prefix}-price`}
+          name="price"
+          inputMode="decimal"
+          placeholder="0,00"
+          defaultValue={type ? formatPriceInput(type.price) : ""}
+        />
+        <p className="text-xs text-muted-foreground">
+          Gravado no serviço no momento em que ele é finalizado. Mudar o valor
+          aqui não altera serviços já finalizados.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${prefix}-checklist`}>
+          Checklist de documentos
+        </Label>
+        <Textarea
+          id={`${prefix}-checklist`}
+          name="documentChecklist"
+          rows={6}
+          placeholder={"ATPV/DUT\nCNH ou RG\n..."}
+          defaultValue={type?.document_checklist.join("\n")}
+        />
+        <p className="text-xs text-muted-foreground">
+          Um documento por linha. Ao solicitar este serviço, o usuário precisa
+          marcar todos os itens antes de enviar.
+        </p>
+      </div>
+    </>
+  );
+}
 
 export default function ServiceTypesManager({
   initialTypes,
@@ -31,7 +96,10 @@ export default function ServiceTypesManager({
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const editingType = types.find((t) => t.id === editingId);
 
   function applyLocal(id: string, changes: Partial<ServiceType>) {
     setTypes((prev) =>
@@ -66,24 +134,25 @@ export default function ServiceTypesManager({
     }
   }
 
-  function startEdit(type: ServiceType) {
-    setEditingId(type.id);
-    setEditingName(type.name);
-  }
-
-  async function saveEdit(id: string) {
-    const name = editingName.trim();
-    if (!name) return;
-    const previous = types.find((t) => t.id === id)?.name;
-    applyLocal(id, { name });
-    setEditingId(null);
-    const result = await updateServiceType(id, { name });
+  async function handleEdit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editingId) return;
+    setEditError(null);
+    setSaving(true);
+    const formData = new FormData(e.currentTarget);
+    const result = await updateServiceType(editingId, {
+      name: String(formData.get("name") ?? ""),
+      price: String(formData.get("price") ?? ""),
+      documentChecklist: String(formData.get("documentChecklist") ?? ""),
+    });
+    setSaving(false);
     if (!result.success) {
-      toast.error(result.error);
-      if (previous) applyLocal(id, { name: previous });
-    } else {
-      toast.success("Nome atualizado.");
+      setEditError(result.error);
+      return;
     }
+    toast.success("Tipo de serviço atualizado.");
+    setEditingId(null);
+    window.location.reload();
   }
 
   return (
@@ -103,10 +172,7 @@ export default function ServiceTypesManager({
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome *</Label>
-                <Input id="name" name="name" required />
-              </div>
+              <ServiceTypeFields />
               {createError && (
                 <p className="text-sm text-destructive" role="alert">
                   {createError}
@@ -122,11 +188,48 @@ export default function ServiceTypesManager({
         </Dialog>
       </div>
 
+      <Dialog
+        open={editingType !== undefined}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingId(null);
+            setEditError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar tipo de serviço</DialogTitle>
+            <DialogDescription>
+              Os nomes com "Entrada" ou "Saída" controlam a integração
+              automática com o estoque, então edite esses com cuidado.
+            </DialogDescription>
+          </DialogHeader>
+          {editingType && (
+            <form onSubmit={handleEdit} className="space-y-4">
+              <ServiceTypeFields type={editingType} />
+              {editError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {editError}
+                </p>
+              )}
+              <DialogFooter>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Salvando..." : "Salvar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="overflow-x-auto rounded-lg border bg-background">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
               <th className="p-3">Nome</th>
+              <th className="p-3">Valor</th>
+              <th className="p-3">Checklist</th>
               <th className="p-3">Status</th>
               <th className="p-3"></th>
             </tr>
@@ -134,29 +237,16 @@ export default function ServiceTypesManager({
           <tbody>
             {types.map((t) => (
               <tr key={t.id} className="border-b last:border-0">
-                <td className="p-3 font-medium">
-                  {editingId === t.id ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Input
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        className="h-8 w-64"
-                        autoFocus
-                      />
-                      <Button size="sm" onClick={() => saveEdit(t.id)}>
-                        Salvar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEditingId(null)}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  ) : (
-                    t.name
-                  )}
+                <td className="p-3 font-medium">{t.name}</td>
+                <td className="p-3 whitespace-nowrap">
+                  {formatCurrency(t.price)}
+                </td>
+                <td className="p-3 text-muted-foreground">
+                  {t.document_checklist.length === 0
+                    ? "—"
+                    : `${t.document_checklist.length} documento${
+                        t.document_checklist.length === 1 ? "" : "s"
+                      }`}
                 </td>
                 <td className="p-3">
                   {t.active ? (
@@ -170,16 +260,14 @@ export default function ServiceTypesManager({
                   )}
                 </td>
                 <td className="p-3 whitespace-nowrap">
-                  {editingId !== t.id && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mr-2"
-                      onClick={() => startEdit(t)}
-                    >
-                      Editar nome
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mr-2"
+                    onClick={() => setEditingId(t.id)}
+                  >
+                    Editar
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"

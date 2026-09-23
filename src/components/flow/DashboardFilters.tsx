@@ -30,6 +30,8 @@ const PERIOD_OPTIONS = [
   { id: "30", name: "Últimos 30 dias" },
 ];
 
+const URGENT_OPTIONS = [{ id: "1", name: "🚨 Só urgentes" }];
+
 export default function DashboardFilters({
   units,
   serviceTypes,
@@ -100,6 +102,11 @@ export default function DashboardFilters({
         paramKey="serviceType"
         placeholder="Tipo de Serviço"
         options={serviceTypes}
+      />
+      <FilterSelect
+        paramKey="urgent"
+        placeholder="Urgência"
+        options={URGENT_OPTIONS}
       />
     </div>
   );

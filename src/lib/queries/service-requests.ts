@@ -7,6 +7,7 @@ export type ServiceListFilters = {
   status?: string;
   serviceType?: string;
   period?: string;
+  urgent?: string;
 };
 
 export type ServiceListSort =
@@ -37,6 +38,7 @@ export async function getServiceRequestsList(
     .from("service_requests")
     .select(
       `id, plate, protocol, status, requested_at, finished_at, stopped_reason,
+       is_urgent,
        service_types ( name ),
        profiles!service_requests_created_by_fkey ( name ),
        units ( name )`,
@@ -49,6 +51,10 @@ export async function getServiceRequestsList(
   if (filters.status) query = query.eq("status", filters.status);
   if (filters.serviceType)
     query = query.eq("service_type_id", filters.serviceType);
+  // "Urgentes" = urgentes ainda em aberto (finalizado não precisa mais de
+  // atenção).
+  if (filters.urgent === "1")
+    query = query.eq("is_urgent", true).neq("status", "FINALIZADO");
 
   const startDate = periodStartDate(filters.period);
   if (startDate) query = query.gte("requested_at", startDate);
@@ -91,7 +97,7 @@ export async function getServiceRequestDetail(id: string) {
     .from("service_requests")
     .select(
       `id, plate, protocol, status, notes, requested_at, finished_at, created_at,
-       stopped_reason,
+       stopped_reason, charged_amount, is_urgent,
        service_types ( id, name ),
        profiles!service_requests_created_by_fkey ( id, name ),
        units ( id, name )`

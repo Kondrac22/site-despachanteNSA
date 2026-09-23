@@ -6,6 +6,7 @@ export type DashboardFilters = {
   status?: string;
   serviceType?: string;
   period?: string;
+  urgent?: string;
 };
 
 function periodStartDate(period?: string): string | null {
@@ -22,6 +23,8 @@ function applyBaseFilters(query: any, filters: DashboardFilters) {
   if (filters.unit) query = query.eq("unit_id", filters.unit);
   if (filters.serviceType)
     query = query.eq("service_type_id", filters.serviceType);
+  if (filters.urgent === "1")
+    query = query.eq("is_urgent", true).neq("status", "FINALIZADO");
 
   const startDate = periodStartDate(filters.period);
   if (startDate) query = query.gte("requested_at", startDate);
@@ -67,11 +70,22 @@ export async function getDashboardIndicators(filters: DashboardFilters) {
     return count ?? 0;
   }
 
-  const [parado, aFazer, finalizado, total] = await Promise.all([
+  async function countUrgentOpen() {
+    let query = supabase
+      .from("service_requests")
+      .select("id", { count: "exact", head: true });
+    query = applyBaseFilters(query, filters);
+    query = query.eq("is_urgent", true).neq("status", "FINALIZADO");
+    const { count } = await query;
+    return count ?? 0;
+  }
+
+  const [parado, aFazer, finalizado, total, urgentes] = await Promise.all([
     countByStatus("PARADO"),
     countByStatus("A_FAZER"),
     countByStatus("FINALIZADO"),
     countByStatus(),
+    countUrgentOpen(),
   ]);
 
   const { data: movements } = await supabase
@@ -89,7 +103,7 @@ export async function getDashboardIndicators(filters: DashboardFilters) {
     (type) => type === "ENTRY"
   ).length;
 
-  return { parado, aFazer, finalizado, total, vehiclesInStock };
+  return { parado, aFazer, finalizado, total, urgentes, vehiclesInStock };
 }
 
 export async function getRecentServiceRequests(filters: DashboardFilters) {
@@ -99,6 +113,7 @@ export async function getRecentServiceRequests(filters: DashboardFilters) {
     .from("service_requests")
     .select(
       `id, plate, protocol, status, requested_at, finished_at, stopped_reason,
+       is_urgent,
        service_types ( name ),
        profiles!service_requests_created_by_fkey ( name ),
        units ( name )`

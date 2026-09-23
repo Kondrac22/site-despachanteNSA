@@ -22,7 +22,7 @@ export default async function TiposServicoPage() {
 
   const { data: types } = await supabase
     .from("service_types")
-    .select("id, name, active")
+    .select("id, name, active, price, document_checklist")
     .order("active", { ascending: false })
     .order("name");
 
@@ -35,7 +35,13 @@ export default async function TiposServicoPage() {
           Serviço.
         </p>
       </div>
-      <ServiceTypesManager initialTypes={types ?? []} />
+      <ServiceTypesManager
+        initialTypes={(types ?? []).map((t) => ({
+          ...t,
+          price: Number(t.price ?? 0),
+          document_checklist: t.document_checklist ?? [],
+        }))}
+      />
     </div>
   );
 }

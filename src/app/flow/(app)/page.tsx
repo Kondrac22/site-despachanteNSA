@@ -1,6 +1,7 @@
 import Link from "next/link";
 import DashboardFilters from "@/components/flow/DashboardFilters";
 import CreatedToast from "@/components/flow/CreatedToast";
+import UrgentBadge from "@/components/flow/UrgentBadge";
 import {
   getFilterOptions,
   getDashboardIndicators,
@@ -29,6 +30,7 @@ export default async function DashboardPage({
     status?: string;
     serviceType?: string;
     period?: string;
+    urgent?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -38,6 +40,7 @@ export default async function DashboardPage({
     status: params.status,
     serviceType: params.serviceType,
     period: params.period,
+    urgent: params.urgent,
   };
 
   const [filterOptions, indicators, recentRequests, currentStock] =
@@ -48,7 +51,18 @@ export default async function DashboardPage({
       getCurrentStock(5),
     ]);
 
-  const cards = [
+  const cards: {
+    label: string;
+    value: number;
+    accent: string;
+    href?: string;
+  }[] = [
+    {
+      label: "Urgentes em aberto",
+      value: indicators.urgentes,
+      accent: "text-red-600",
+      href: "/flow/servicos?urgent=1",
+    },
     { label: "Parados", value: indicators.parado, accent: "text-red-600" },
     { label: "A Fazer", value: indicators.aFazer, accent: "text-green-600" },
     {
@@ -81,18 +95,38 @@ export default async function DashboardPage({
         requesters={filterOptions.requesters}
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {cards.map((card) => (
-          <div
-            key={card.label}
-            className="rounded-lg border bg-background p-4 shadow-sm"
-          >
-            <p className="text-sm text-muted-foreground">{card.label}</p>
-            <p className={`mt-1 text-3xl font-bold ${card.accent}`}>
-              {card.value}
-            </p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        {cards.map((card) => {
+          const content = (
+            <>
+              <p className="text-sm text-muted-foreground">{card.label}</p>
+              <p className={`mt-1 text-3xl font-bold ${card.accent}`}>
+                {card.value}
+              </p>
+            </>
+          );
+          return card.href ? (
+            <Link
+              key={card.label}
+              href={card.href}
+              className={`rounded-lg border bg-background p-4 shadow-sm transition-colors hover:border-red-400 ${
+                card.value > 0 ? "border-red-300" : ""
+              }`}
+            >
+              {content}
+              <p className="mt-1 text-xs font-medium text-primary">
+                Ver lista →
+              </p>
+            </Link>
+          ) : (
+            <div
+              key={card.label}
+              className="rounded-lg border bg-background p-4 shadow-sm"
+            >
+              {content}
+            </div>
+          );
+        })}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -126,49 +160,59 @@ export default async function DashboardPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {recentRequests.map((request: any) => (
-                    <tr key={request.id} className="border-b last:border-0">
-                      <td className="py-2 pr-2 font-mono text-xs">
-                        {request.protocol ?? "—"}
-                      </td>
-                      <td className="py-2 pr-2 font-medium">
-                        {request.plate}
-                      </td>
-                      <td className="py-2 pr-2">
-                        {request.service_types?.name ?? "—"}
-                      </td>
-                      <td className="py-2 pr-2">
-                        {STATUS_LABEL[request.status] ?? request.status}
-                      </td>
-                      <td className="py-2 pr-2 max-w-[220px]">
-                        {request.status === "PARADO" &&
-                        request.stopped_reason ? (
-                          <span
-                            className="line-clamp-2 text-red-700"
-                            title={request.stopped_reason}
+                  {recentRequests.map((request: any) => {
+                    const urgent =
+                      request.is_urgent && request.status !== "FINALIZADO";
+                    return (
+                      <tr
+                        key={request.id}
+                        className={`border-b last:border-0 ${urgent ? "bg-red-50" : ""}`}
+                      >
+                        <td className="py-2 pr-2 font-mono text-xs">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {request.protocol ?? "—"}
+                            {urgent && <UrgentBadge />}
+                          </div>
+                        </td>
+                        <td className="py-2 pr-2 font-medium">
+                          {request.plate}
+                        </td>
+                        <td className="py-2 pr-2">
+                          {request.service_types?.name ?? "—"}
+                        </td>
+                        <td className="py-2 pr-2">
+                          {STATUS_LABEL[request.status] ?? request.status}
+                        </td>
+                        <td className="py-2 pr-2 max-w-[220px]">
+                          {request.status === "PARADO" &&
+                          request.stopped_reason ? (
+                            <span
+                              className="line-clamp-2 text-red-700"
+                              title={request.stopped_reason}
+                            >
+                              {request.stopped_reason}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="py-2 pr-2">
+                          {request.profiles?.name ?? "—"}
+                        </td>
+                        <td className="py-2 pr-2">
+                          {formatDate(request.requested_at)}
+                        </td>
+                        <td className="py-2">
+                          <Link
+                            href={`/flow/servicos/${request.id}`}
+                            className="font-medium text-primary hover:underline"
                           >
-                            {request.stopped_reason}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="py-2 pr-2">
-                        {request.profiles?.name ?? "—"}
-                      </td>
-                      <td className="py-2 pr-2">
-                        {formatDate(request.requested_at)}
-                      </td>
-                      <td className="py-2">
-                        <Link
-                          href={`/flow/servicos/${request.id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          Ver
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                            Ver
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

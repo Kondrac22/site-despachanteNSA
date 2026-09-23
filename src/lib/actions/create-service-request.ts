@@ -62,13 +62,23 @@ export async function createServiceRequest(
 
   const { data: serviceType } = await supabase
     .from("service_types")
-    .select("id")
+    .select("id, document_checklist")
     .eq("id", serviceTypeId)
     .eq("active", true)
     .single();
 
   if (!serviceType) {
     return { success: false, error: "Tipo de serviço inválido." };
+  }
+
+  // Confirmação manual do usuário (não verifica os arquivos anexados).
+  const checklist: string[] = serviceType.document_checklist ?? [];
+  const confirmedItems = formData.getAll("checklist").map(String);
+  if (!checklist.every((item) => confirmedItems.includes(item))) {
+    return {
+      success: false,
+      error: "Confirme todos os documentos do checklist antes de enviar.",
+    };
   }
 
   // Busca o código da unidade pra gerar o protocolo (ex: MTZ-0001).
@@ -109,6 +119,7 @@ export async function createServiceRequest(
       : new Date().toISOString();
 
   const notes = String(formData.get("notes") ?? "").slice(0, 2000);
+  const isUrgent = formData.get("isUrgent") === "1";
 
   const { data: serviceRequest, error: insertError } = await supabase
     .from("service_requests")
@@ -121,6 +132,7 @@ export async function createServiceRequest(
       unit_id: profile.unit_id,
       status: "A_FAZER",
       notes: notes || null,
+      is_urgent: isUrgent,
     })
     .select("id")
     .single();
@@ -137,7 +149,15 @@ export async function createServiceRequest(
     service_request_id: serviceRequest.id,
     user_id: profile.id,
     action: "CRIADO",
-    description: `Protocolo ${protocol}`,
+    description: [
+      `Protocolo ${protocol}`,
+      isUrgent ? "Marcado como urgente" : null,
+      checklist.length > 0
+        ? `Checklist de documentos confirmado (${checklist.length} itens)`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
     new_value: "A_FAZER",
   });
 

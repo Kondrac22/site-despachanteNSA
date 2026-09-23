@@ -8,6 +8,9 @@ import {
 } from "@/components/ui/card";
 import StatusActions from "@/components/flow/StatusActions";
 import DeleteServiceButton from "@/components/flow/DeleteServiceButton";
+import EditServiceDialog from "@/components/flow/EditServiceDialog";
+import UrgentBadge from "@/components/flow/UrgentBadge";
+import UrgentToggle from "@/components/flow/UrgentToggle";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceRequestDetail } from "@/lib/queries/service-requests";
 
@@ -24,11 +27,17 @@ const ACTION_LABEL: Record<string, string> = {
   ENTRADA_ESTOQUE: "Entrada no estoque",
   ENTRADA_DUPLICADA: "Entrada duplicada autorizada",
   SAIDA_ESTOQUE: "Saída do estoque",
+  EDITADO: "Serviço editado",
+  URGENCIA: "Urgência alterada",
 };
 
 function formatDateTime(value: string | null) {
   if (!value) return "—";
   return new Date(value).toLocaleString("pt-BR");
+}
+
+function formatCurrency(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 function formatBytes(bytes: number) {
@@ -62,28 +71,68 @@ export default async function ServiceDetailPage({
 
   const { serviceRequest, files, history } = detail;
   const canDelete = isAdmin && serviceRequest.status !== "FINALIZADO";
+  const canEdit = canDelete;
+  const isOpen = serviceRequest.status !== "FINALIZADO";
+  const isUrgent = Boolean(serviceRequest.is_urgent) && isOpen;
+  const canToggleUrgent =
+    isOpen &&
+    (isAdmin || (serviceRequest as any).profiles?.id === user.id);
+  const currentType = (serviceRequest as any).service_types as {
+    id: string;
+    name: string;
+  } | null;
+
+  let editableTypes: { id: string; name: string }[] = [];
+  if (canEdit) {
+    const { data: activeTypes } = await supabase
+      .from("service_types")
+      .select("id, name")
+      .eq("active", true)
+      .order("name");
+    editableTypes = activeTypes ?? [];
+    // Mantém o tipo atual como opção mesmo se ele tiver sido desativado.
+    if (currentType && !editableTypes.some((t) => t.id === currentType.id)) {
+      editableTypes = [currentType, ...editableTypes];
+    }
+  }
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6 p-6">
-      <div>
-        <Link
-          href="/flow/servicos"
-          className="text-sm text-muted-foreground hover:text-primary"
-        >
-          ← Voltar para Serviços
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold">
-          {serviceRequest.protocol ? (
-            <>
-              Serviço {serviceRequest.protocol}{" "}
-              <span className="text-muted-foreground">
-                — {serviceRequest.plate}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <Link
+            href="/flow/servicos"
+            className="text-sm text-muted-foreground hover:text-primary"
+          >
+            ← Voltar para Serviços
+          </Link>
+          <h1 className="mt-2 text-2xl font-semibold">
+            {serviceRequest.protocol ? (
+              <>
+                Serviço {serviceRequest.protocol}{" "}
+                <span className="text-muted-foreground">
+                  — {serviceRequest.plate}
+                </span>
+              </>
+            ) : (
+              <>Serviço — {serviceRequest.plate}</>
+            )}
+            {isUrgent && (
+              <span className="ml-3 align-middle">
+                <UrgentBadge />
               </span>
-            </>
-          ) : (
-            <>Serviço — {serviceRequest.plate}</>
-          )}
-        </h1>
+            )}
+          </h1>
+        </div>
+        {canEdit && (
+          <EditServiceDialog
+            serviceRequestId={serviceRequest.id}
+            plate={serviceRequest.plate}
+            serviceTypeId={currentType?.id ?? ""}
+            notes={serviceRequest.notes}
+            serviceTypes={editableTypes}
+          />
+        )}
       </div>
 
       <Card>
@@ -141,6 +190,14 @@ export default async function ServiceDetailPage({
               </p>
             </div>
           )}
+          {isAdmin && serviceRequest.charged_amount != null && (
+            <div>
+              <p className="text-xs text-muted-foreground">Valor cobrado</p>
+              <p className="font-medium">
+                {formatCurrency(Number(serviceRequest.charged_amount))}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -164,7 +221,7 @@ export default async function ServiceDetailPage({
         <CardHeader>
           <CardTitle>Ações</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <StatusActions
             serviceRequestId={serviceRequest.id}
             status={
@@ -172,6 +229,14 @@ export default async function ServiceDetailPage({
             }
             plate={serviceRequest.plate}
           />
+          {canToggleUrgent && (
+            <div className="border-t pt-4">
+              <UrgentToggle
+                serviceRequestId={serviceRequest.id}
+                isUrgent={isUrgent}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

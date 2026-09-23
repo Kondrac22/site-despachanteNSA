@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import ServiceListFilters from "@/components/flow/ServiceListFilters";
+import UrgentBadge from "@/components/flow/UrgentBadge";
 import { getFilterOptions } from "@/lib/queries/dashboard";
 import {
   getServiceRequestsList,
@@ -30,6 +31,7 @@ export default async function ServicosPage({
     status?: string;
     serviceType?: string;
     period?: string;
+    urgent?: string;
     sort?: string;
     page?: string;
   }>;
@@ -48,6 +50,7 @@ export default async function ServicosPage({
         status: params.status,
         serviceType: params.serviceType,
         period: params.period,
+        urgent: params.urgent,
       },
       sort,
       page,
@@ -65,6 +68,7 @@ export default async function ServicosPage({
     if (params.status) query.set("status", params.status);
     if (params.serviceType) query.set("serviceType", params.serviceType);
     if (params.period) query.set("period", params.period);
+    if (params.urgent) query.set("urgent", params.urgent);
     if (params.sort) query.set("sort", params.sort);
     query.set("page", String(targetPage));
     return `/flow/servicos?${query.toString()}`;
@@ -117,41 +121,50 @@ export default async function ServicosPage({
                 </td>
               </tr>
             )}
-            {rows.map((row: any) => (
-              <tr key={row.id} className="border-b last:border-0">
-                <td className="p-3 font-mono text-xs">
-                  {row.protocol ?? "—"}
-                </td>
-                <td className="p-3">
-                  {STATUS_LABEL[row.status] ?? row.status}
-                </td>
-                <td className="p-3 font-medium">{row.plate}</td>
-                <td className="p-3">{row.service_types?.name ?? "—"}</td>
-                <td className="p-3 max-w-[220px]">
-                  {row.status === "PARADO" && row.stopped_reason ? (
-                    <span
-                      className="line-clamp-2 text-red-700"
-                      title={row.stopped_reason}
+            {rows.map((row: any) => {
+              const urgent = row.is_urgent && row.status !== "FINALIZADO";
+              return (
+                <tr
+                  key={row.id}
+                  className={`border-b last:border-0 ${urgent ? "bg-red-50" : ""}`}
+                >
+                  <td className="p-3 font-mono text-xs">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {row.protocol ?? "—"}
+                      {urgent && <UrgentBadge />}
+                    </div>
+                  </td>
+                  <td className="p-3">
+                    {STATUS_LABEL[row.status] ?? row.status}
+                  </td>
+                  <td className="p-3 font-medium">{row.plate}</td>
+                  <td className="p-3">{row.service_types?.name ?? "—"}</td>
+                  <td className="p-3 max-w-[220px]">
+                    {row.status === "PARADO" && row.stopped_reason ? (
+                      <span
+                        className="line-clamp-2 text-red-700"
+                        title={row.stopped_reason}
+                      >
+                        {row.stopped_reason}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="p-3">{formatDate(row.requested_at)}</td>
+                  <td className="p-3">{row.profiles?.name ?? "—"}</td>
+                  <td className="p-3">{formatDate(row.finished_at)}</td>
+                  <td className="p-3">
+                    <Link
+                      href={`/flow/servicos/${row.id}`}
+                      className="text-sm font-medium text-primary hover:underline"
                     >
-                      {row.stopped_reason}
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="p-3">{formatDate(row.requested_at)}</td>
-                <td className="p-3">{row.profiles?.name ?? "—"}</td>
-                <td className="p-3">{formatDate(row.finished_at)}</td>
-                <td className="p-3">
-                  <Link
-                    href={`/flow/servicos/${row.id}`}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    Ver
-                  </Link>
-                </td>
-              </tr>
-            ))}
+                      Ver
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -18,12 +18,21 @@ export default async function EstoquePage({
 
   return (
     <div className="container mx-auto max-w-5xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Estoque de Veículos</h1>
-        <p className="text-sm text-muted-foreground">
-          {rows.length} veículo{rows.length === 1 ? "" : "s"} atualmente em
-          estoque.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Estoque de Veículos</h1>
+          <p className="text-sm text-muted-foreground">
+            {rows.length} veículo{rows.length === 1 ? "" : "s"} atualmente em
+            estoque.
+          </p>
+        </div>
+        {/* <a> em vez de <Link>: é um download, não uma navegação. O
+            arquivo sempre traz o estoque inteiro, ignorando o filtro. */}
+        <Button asChild variant="outline">
+          <a href="/flow/estoque/exportar" download>
+            Exportar para Excel
+          </a>
+        </Button>
       </div>
 
       <form className="flex gap-2" action="/flow/estoque">

@@ -11,7 +11,7 @@ export default async function SolicitarServicoPage() {
   const [{ data: serviceTypes }, { data: profile }] = await Promise.all([
     supabase
       .from("service_types")
-      .select("id, name")
+      .select("id, name, document_checklist")
       .eq("active", true)
       .order("name"),
     user
@@ -24,7 +24,10 @@ export default async function SolicitarServicoPage() {
   return (
     <div className="container mx-auto max-w-3xl p-6">
       <SolicitarServicoForm
-        serviceTypes={serviceTypes ?? []}
+        serviceTypes={(serviceTypes ?? []).map((t) => ({
+          ...t,
+          document_checklist: t.document_checklist ?? [],
+        }))}
         isAdmin={profile?.role === "admin"}
         todayIso={today}
       />

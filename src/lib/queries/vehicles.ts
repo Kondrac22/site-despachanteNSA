@@ -5,6 +5,7 @@ export type CurrentStockRow = {
   plate: string;
   entry_at: string;
   service_request_id: string | null;
+  protocol: string | null;
   service_type_name: string | null;
   responsible_name: string | null;
 };
@@ -20,7 +21,7 @@ export async function getCurrentStockList(
       `vehicle_id, movement_type, created_at, service_request_id,
        vehicles ( plate ),
        profiles!vehicle_movements_user_id_fkey ( name ),
-       service_requests ( service_types ( name ) )`
+       service_requests ( protocol, service_types ( name ) )`
     )
     .order("created_at", { ascending: false });
 
@@ -42,6 +43,7 @@ export async function getCurrentStockList(
       plate: m.vehicles?.plate ?? "—",
       entry_at: m.created_at,
       service_request_id: m.service_request_id,
+      protocol: m.service_requests?.protocol ?? null,
       service_type_name: m.service_requests?.service_types?.name ?? null,
       responsible_name: m.profiles?.name ?? null,
     }));

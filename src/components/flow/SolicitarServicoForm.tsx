@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/card";
 import { createServiceRequest } from "@/lib/actions/create-service-request";
 
-type ServiceType = { id: string; name: string };
+type ServiceType = { id: string; name: string; document_checklist: string[] };
 
 type SolicitarServicoFormProps = {
   serviceTypes: ServiceType[];
@@ -35,10 +35,36 @@ export default function SolicitarServicoForm({
 }: SolicitarServicoFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [serviceTypeId, setServiceTypeId] = useState("");
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+
+  const checklist =
+    serviceTypes.find((t) => t.id === serviceTypeId)?.document_checklist ?? [];
+  const checklistComplete = checklist.every((item) => checkedItems.has(item));
+
+  function handleServiceTypeChange(value: string) {
+    setServiceTypeId(value);
+    setCheckedItems(new Set());
+  }
+
+  function toggleItem(item: string, checked: boolean) {
+    setCheckedItems((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(item);
+      else next.delete(item);
+      return next;
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
+    if (!checklistComplete) {
+      setError("Confirme todos os documentos do checklist antes de enviar.");
+      return;
+    }
+
     setSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
@@ -73,7 +99,12 @@ export default function SolicitarServicoForm({
 
           <div className="space-y-2">
             <Label htmlFor="serviceTypeId">Tipo de Serviço *</Label>
-            <Select name="serviceTypeId" required>
+            <Select
+              name="serviceTypeId"
+              required
+              value={serviceTypeId}
+              onValueChange={handleServiceTypeChange}
+            >
               <SelectTrigger id="serviceTypeId" className="w-full">
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
@@ -86,6 +117,35 @@ export default function SolicitarServicoForm({
               </SelectContent>
             </Select>
           </div>
+
+          {checklist.length > 0 && (
+            <fieldset className="space-y-2 rounded-md border p-4">
+              <legend className="px-1 text-sm font-medium">
+                Checklist de documentos *
+              </legend>
+              <p className="text-xs text-muted-foreground">
+                Confirme que você tem em mãos cada documento abaixo.
+              </p>
+              {checklist.map((item, index) => (
+                <label
+                  key={item}
+                  htmlFor={`checklist-${index}`}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <input
+                    id={`checklist-${index}`}
+                    type="checkbox"
+                    name="checklist"
+                    value={item}
+                    checked={checkedItems.has(item)}
+                    onChange={(e) => toggleItem(item, e.target.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  {item}
+                </label>
+              ))}
+            </fieldset>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="requestedAt">Data</Label>
@@ -103,6 +163,20 @@ export default function SolicitarServicoForm({
               </p>
             )}
           </div>
+
+          <label
+            htmlFor="isUrgent"
+            className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+          >
+            <input
+              id="isUrgent"
+              type="checkbox"
+              name="isUrgent"
+              value="1"
+              className="h-4 w-4 accent-red-600"
+            />
+            🚨 Marcar como urgente
+          </label>
 
           <div className="space-y-2">
             <Label htmlFor="notes">Observações</Label>
@@ -129,7 +203,11 @@ export default function SolicitarServicoForm({
             </p>
           )}
 
-          <Button type="submit" className="w-full" disabled={submitting}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={submitting || !checklistComplete}
+          >
             {submitting ? "Enviando..." : "Solicitar"}
           </Button>
         </form>
