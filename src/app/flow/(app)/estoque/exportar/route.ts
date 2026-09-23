@@ -34,6 +34,7 @@ export async function GET() {
   const header = [
     "Placa",
     "Protocolo",
+    "Unidade",
     "Data de Entrada",
     "Tipo de Serviço",
     "Responsável",
@@ -43,6 +44,7 @@ export async function GET() {
     [
       row.plate,
       row.protocol ?? "",
+      row.unit_name ?? "",
       formatDate(row.entry_at),
       row.service_type_name ?? "",
       row.responsible_name ?? "",

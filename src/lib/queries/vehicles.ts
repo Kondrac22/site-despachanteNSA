@@ -6,12 +6,17 @@ export type CurrentStockRow = {
   entry_at: string;
   service_request_id: string | null;
   protocol: string | null;
+  unit_id: string | null;
+  unit_name: string | null;
   service_type_name: string | null;
   responsible_name: string | null;
 };
 
+// A unidade de um veículo em estoque é a unidade do serviço que deu a
+// entrada nele (o veículo em si não pertence a nenhuma unidade).
 export async function getCurrentStockList(
-  plateFilter?: string
+  plateFilter?: string,
+  unitFilter?: string
 ): Promise<CurrentStockRow[]> {
   const supabase = await createClient();
 
@@ -21,7 +26,7 @@ export async function getCurrentStockList(
       `vehicle_id, movement_type, created_at, service_request_id,
        vehicles ( plate ),
        profiles!vehicle_movements_user_id_fkey ( name ),
-       service_requests ( protocol, service_types ( name ) )`
+       service_requests ( protocol, units ( id, name ), service_types ( name ) )`
     )
     .order("created_at", { ascending: false });
 
@@ -44,6 +49,8 @@ export async function getCurrentStockList(
       entry_at: m.created_at,
       service_request_id: m.service_request_id,
       protocol: m.service_requests?.protocol ?? null,
+      unit_id: m.service_requests?.units?.id ?? null,
+      unit_name: m.service_requests?.units?.name ?? null,
       service_type_name: m.service_requests?.service_types?.name ?? null,
       responsible_name: m.profiles?.name ?? null,
     }));
@@ -51,6 +58,10 @@ export async function getCurrentStockList(
   if (plateFilter) {
     const normalized = plateFilter.trim().toUpperCase();
     rows = rows.filter((r) => r.plate.includes(normalized));
+  }
+
+  if (unitFilter) {
+    rows = rows.filter((r) => r.unit_id === unitFilter);
   }
 
   rows.sort(
