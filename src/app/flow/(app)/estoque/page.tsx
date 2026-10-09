@@ -11,6 +11,7 @@ import {
 import { getFilterOptions } from "@/lib/queries/dashboard";
 import {
   getCurrentStockList,
+  getStockScope,
   type CurrentStockRow,
 } from "@/lib/queries/vehicles";
 
@@ -40,9 +41,10 @@ export default async function EstoquePage({
 }) {
   const params = await searchParams;
   const unitFilter = params.unit && params.unit !== ALL ? params.unit : "";
-  const [rows, filterOptions] = await Promise.all([
+  const [rows, filterOptions, scope] = await Promise.all([
     getCurrentStockList(params.plate, unitFilter || undefined),
     getFilterOptions(),
+    getStockScope(),
   ]);
   const normalizedFilter = params.plate?.trim().toUpperCase();
   const groups = groupByUnit(rows);
@@ -58,7 +60,8 @@ export default async function EstoquePage({
           </p>
         </div>
         {/* <a> em vez de <Link>: é um download, não uma navegação. O
-            arquivo sempre traz o estoque inteiro, ignorando o filtro. */}
+            arquivo ignora o filtro: traz o estoque inteiro (admin) ou o
+            da unidade do usuário. */}
         <Button asChild variant="outline">
           <a href="/flow/estoque/exportar" download>
             Exportar para Excel
@@ -73,19 +76,22 @@ export default async function EstoquePage({
           defaultValue={params.plate ?? ""}
           className="max-w-xs uppercase"
         />
-        <Select name="unit" defaultValue={unitFilter || ALL}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Unidade" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Todas as unidades</SelectItem>
-            {filterOptions.units.map((unit) => (
-              <SelectItem key={unit.id} value={unit.id}>
-                {unit.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Só o admin escolhe a unidade; os demais veem a própria. */}
+        {scope.isAdmin && (
+          <Select name="unit" defaultValue={unitFilter || ALL}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Unidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Todas as unidades</SelectItem>
+              {filterOptions.units.map((unit) => (
+                <SelectItem key={unit.id} value={unit.id}>
+                  {unit.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Button type="submit" variant="secondary">
           Filtrar
         </Button>

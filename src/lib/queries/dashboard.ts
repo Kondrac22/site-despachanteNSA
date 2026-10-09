@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getStockScope } from "@/lib/queries/vehicles";
 
 export type DashboardFilters = {
   requester?: string;
@@ -82,10 +83,15 @@ export async function getDashboardIndicators(filters: DashboardFilters) {
   }
 
   // A view current_vehicle_stock já devolve só os veículos em estoque.
+  // Usuário comum conta só o estoque da própria unidade.
   async function countVehiclesInStock() {
-    const { count } = await supabase
+    const scope = await getStockScope();
+    if (!scope.isAdmin && !scope.unitId) return 0;
+    let query = supabase
       .from("current_vehicle_stock")
       .select("vehicle_id", { count: "exact", head: true });
+    if (!scope.isAdmin) query = query.eq("unit_id", scope.unitId);
+    const { count } = await query;
     return count ?? 0;
   }
 

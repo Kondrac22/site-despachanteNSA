@@ -12,6 +12,27 @@ export type CurrentStockRow = {
   responsible_name: string | null;
 };
 
+// Administrador vê o estoque de todas as unidades; os demais usuários,
+// só o da unidade em que trabalham (unitId null = sem unidade, não vê nada).
+export async function getStockScope(): Promise<
+  { isAdmin: true } | { isAdmin: false; unitId: string | null }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { isAdmin: false, unitId: null };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, unit_id")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role === "admin") return { isAdmin: true };
+  return { isAdmin: false, unitId: profile?.unit_id ?? null };
+}
+
 // A unidade de um veículo em estoque é a unidade do serviço que deu a
 // entrada nele (o veículo em si não pertence a nenhuma unidade).
 export async function getCurrentStockList(
@@ -19,6 +40,12 @@ export async function getCurrentStockList(
   unitFilter?: string,
   limit?: number
 ): Promise<CurrentStockRow[]> {
+  const scope = await getStockScope();
+  if (!scope.isAdmin) {
+    if (!scope.unitId) return [];
+    unitFilter = scope.unitId;
+  }
+
   const supabase = await createClient();
 
   // A view current_vehicle_stock (supabase/estoque-atual.sql) já calcula
