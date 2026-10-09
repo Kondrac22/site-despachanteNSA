@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getStockScope } from "@/lib/queries/vehicles";
+import { getUserScope } from "@/lib/queries/user-scope";
 
 export type DashboardFilters = {
   requester?: string;
@@ -18,6 +18,19 @@ function periodStartDate(period?: string): string | null {
   const date = new Date();
   date.setDate(date.getDate() - days);
   return date.toISOString();
+}
+
+// Usuário comum só vê os serviços da própria unidade, seja qual for o
+// filtro de unidade escolhido. Sem unidade, usa um id que não existe
+// (não vê nada).
+const NO_UNIT_ID = "00000000-0000-0000-0000-000000000000";
+
+async function scopeFilters(
+  filters: DashboardFilters
+): Promise<DashboardFilters> {
+  const scope = await getUserScope();
+  if (scope.isAdmin) return filters;
+  return { ...filters, unit: scope.unitId ?? NO_UNIT_ID };
 }
 
 function applyBaseFilters(query: any, filters: DashboardFilters) {
@@ -59,8 +72,11 @@ export async function getFilterOptions() {
   };
 }
 
-export async function getDashboardIndicators(filters: DashboardFilters) {
+export async function getDashboardIndicators(
+  requestedFilters: DashboardFilters
+) {
   const supabase = await createClient();
+  const filters = await scopeFilters(requestedFilters);
 
   async function countByStatus(status?: string) {
     let query = supabase
@@ -85,7 +101,7 @@ export async function getDashboardIndicators(filters: DashboardFilters) {
   // A view current_vehicle_stock já devolve só os veículos em estoque.
   // Usuário comum conta só o estoque da própria unidade.
   async function countVehiclesInStock() {
-    const scope = await getStockScope();
+    const scope = await getUserScope();
     if (!scope.isAdmin && !scope.unitId) return 0;
     let query = supabase
       .from("current_vehicle_stock")
@@ -113,8 +129,11 @@ export async function getDashboardIndicators(filters: DashboardFilters) {
   };
 }
 
-export async function getRecentServiceRequests(filters: DashboardFilters) {
+export async function getRecentServiceRequests(
+  requestedFilters: DashboardFilters
+) {
   const supabase = await createClient();
+  const filters = await scopeFilters(requestedFilters);
 
   let query = supabase
     .from("service_requests")

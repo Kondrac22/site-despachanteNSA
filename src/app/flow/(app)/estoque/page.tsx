@@ -11,9 +11,9 @@ import {
 import { getFilterOptions } from "@/lib/queries/dashboard";
 import {
   getCurrentStockList,
-  getStockScope,
   type CurrentStockRow,
 } from "@/lib/queries/vehicles";
+import { getUserScope } from "@/lib/queries/user-scope";
 
 const ALL = "TODOS";
 const NO_UNIT = "Sem unidade";
@@ -44,7 +44,7 @@ export default async function EstoquePage({
   const [rows, filterOptions, scope] = await Promise.all([
     getCurrentStockList(params.plate, unitFilter || undefined),
     getFilterOptions(),
-    getStockScope(),
+    getUserScope(),
   ]);
   const normalizedFilter = params.plate?.trim().toUpperCase();
   const groups = groupByUnit(rows);

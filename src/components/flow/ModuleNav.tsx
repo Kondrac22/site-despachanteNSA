@@ -25,7 +25,7 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
     { href: "/flow/solicitar", label: "Nova Solicitação" },
     { href: "/flow/servicos", label: "Acompanhamento" },
     { href: "/flow/estoque", label: "Estoque de Veículos" },
-    { href: "/flow/historico", label: "Concluídos" },
+    { href: "/flow/historico", label: "Histórico" },
     ...(isAdmin
       ? [
           { href: "/flow/financeiro", label: "Financeiro" },
@@ -50,7 +50,7 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <div className="container mx-auto flex min-h-16 items-center justify-between gap-4 px-4 py-2">
         <Link
           href="/flow"
           className="text-sm font-bold text-primary"
@@ -58,16 +58,16 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
           Prestação de Serviços
         </Link>
 
-        <nav className="hidden md:flex items-center space-x-6">
+        <nav className="hidden md:flex flex-wrap items-center gap-2">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
+                "rounded-lg border px-3.5 py-1.5 text-sm font-medium transition-colors",
                 isActive(link.href)
-                  ? "text-primary"
-                  : "text-muted-foreground"
+                  ? "border-blue-600 bg-blue-600 text-white shadow-sm"
+                  : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
               )}
             >
               {link.label}

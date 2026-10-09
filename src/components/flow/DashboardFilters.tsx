@@ -17,6 +17,8 @@ type DashboardFiltersProps = {
   units: Option[];
   serviceTypes: Option[];
   requesters: Option[];
+  // Só o admin filtra por unidade; os demais veem a própria.
+  showUnitFilter: boolean;
 };
 
 const ALL = "TODOS";
@@ -32,6 +34,7 @@ export default function DashboardFilters({
   units,
   serviceTypes,
   requesters,
+  showUnitFilter,
 }: DashboardFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,7 +92,9 @@ export default function DashboardFilters({
         label="Solicitante"
         options={requesters}
       />
-      <FilterSelect paramKey="unit" label="Unidade" options={units} />
+      {showUnitFilter && (
+        <FilterSelect paramKey="unit" label="Unidade" options={units} />
+      )}
       <FilterSelect
         paramKey="status"
         label="Status"

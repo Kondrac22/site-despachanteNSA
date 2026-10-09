@@ -9,6 +9,7 @@ import {
   type DashboardFilters as Filters,
 } from "@/lib/queries/dashboard";
 import { getCurrentStockList } from "@/lib/queries/vehicles";
+import { getUserScope } from "@/lib/queries/user-scope";
 import { REASON_TEXT_CLASS, STATUS_LABEL } from "@/lib/constants/service-status";
 
 function formatDate(value: string | null) {
@@ -53,37 +54,57 @@ export default async function DashboardPage({
     ? `/flow?${toggleFinishedQuery}`
     : "/flow";
 
-  const [filterOptions, indicators, recentRequests, currentStock] =
+  const [filterOptions, indicators, recentRequests, currentStock, scope] =
     await Promise.all([
       getFilterOptions(),
       getDashboardIndicators(filters),
       getRecentServiceRequests(filters),
       getCurrentStockList(undefined, undefined, 5),
+      getUserScope(),
     ]);
 
+  // Cada card tem a sua cor e leva para a lista correspondente.
   const cards: {
     label: string;
     value: number;
-    accent: string;
-    href?: string;
+    href: string;
+    box: string;
+    text: string;
   }[] = [
     {
       label: "Urgentes em aberto",
       value: indicators.urgentes,
-      accent: "text-red-600",
       href: "/flow/servicos?urgent=1",
+      box: "bg-red-100 hover:ring-red-300",
+      text: "text-red-700",
     },
-    { label: "Parados", value: indicators.parado, accent: "text-red-600" },
-    { label: "A Fazer", value: indicators.aFazer, accent: "text-green-600" },
     {
-      label: "Pendência de documento",
+      label: "Parados",
+      value: indicators.parado,
+      href: "/flow/servicos?status=PARADO",
+      box: "bg-orange-100 hover:ring-orange-300",
+      text: "text-orange-700",
+    },
+    {
+      label: "A fazer",
+      value: indicators.aFazer,
+      href: "/flow/servicos?status=A_FAZER",
+      box: "bg-green-100 hover:ring-green-300",
+      text: "text-green-700",
+    },
+    {
+      label: "Pendência de doc.",
       value: indicators.pendenteDocumento,
-      accent: "text-blue-600",
+      href: "/flow/servicos?status=PENDENTE_DOCUMENTO",
+      box: "bg-blue-100 hover:ring-blue-300",
+      text: "text-blue-700",
     },
     {
-      label: "Veículos em Estoque",
+      label: "Em estoque",
       value: indicators.vehiclesInStock,
-      accent: "text-primary",
+      href: "/flow/estoque",
+      box: "bg-yellow-100 hover:ring-yellow-300",
+      text: "text-yellow-700",
     },
   ];
 
@@ -102,40 +123,22 @@ export default async function DashboardPage({
         units={filterOptions.units}
         serviceTypes={filterOptions.serviceTypes}
         requesters={filterOptions.requesters}
+        showUnitFilter={scope.isAdmin}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        {cards.map((card) => {
-          const content = (
-            <>
-              <p className="text-sm text-muted-foreground">{card.label}</p>
-              <p className={`mt-1 text-3xl font-bold ${card.accent}`}>
-                {card.value}
-              </p>
-            </>
-          );
-          return card.href ? (
-            <Link
-              key={card.label}
-              href={card.href}
-              className={`rounded-lg border bg-background p-4 shadow-sm transition-colors hover:border-red-400 ${
-                card.value > 0 ? "border-red-300" : ""
-              }`}
-            >
-              {content}
-              <p className="mt-1 text-xs font-medium text-primary">
-                Ver lista →
-              </p>
-            </Link>
-          ) : (
-            <div
-              key={card.label}
-              className="rounded-lg border bg-background p-4 shadow-sm"
-            >
-              {content}
-            </div>
-          );
-        })}
+        {cards.map((card) => (
+          <Link
+            key={card.label}
+            href={card.href}
+            className={`rounded-xl p-4 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-2 ${card.box}`}
+          >
+            <p className={`text-sm font-medium ${card.text}`}>{card.label}</p>
+            <p className={`mt-1 text-3xl font-bold ${card.text}`}>
+              {card.value}
+            </p>
+          </Link>
+        ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
