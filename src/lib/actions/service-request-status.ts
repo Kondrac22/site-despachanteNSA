@@ -66,6 +66,15 @@ export async function changeServiceStatus(
     };
   }
 
+  // Só administrador finaliza serviço (o banco também confere isso, ver
+  // supabase/finalizar-somente-admin.sql).
+  if (newStatus === "FINALIZADO" && !isAdmin) {
+    return {
+      success: false,
+      error: "Somente administradores podem finalizar um serviço.",
+    };
+  }
+
   const currentStatus = serviceRequest.status as Status;
   const allowed = ALLOWED_TRANSITIONS[currentStatus] ?? [];
   if (!allowed.includes(newStatus)) {
@@ -152,7 +161,7 @@ export async function changeServiceStatus(
   const finishedAt =
     newStatus === "FINALIZADO" ? new Date().toISOString() : null;
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("service_requests")
     .update({
       status: newStatus,
@@ -161,6 +170,16 @@ export async function changeServiceStatus(
       stopped_reason: reason,
     })
     .eq("id", serviceRequestId);
+
+  // Antes o resultado não era conferido e a tela mostrava "Status
+  // atualizado" mesmo quando o banco recusava a mudança.
+  if (updateError) {
+    console.error("changeServiceStatus update error:", updateError.message);
+    return {
+      success: false,
+      error: "Não foi possível alterar o status. Tente novamente.",
+    };
+  }
 
   await supabase.from("service_history").insert({
     service_request_id: serviceRequestId,

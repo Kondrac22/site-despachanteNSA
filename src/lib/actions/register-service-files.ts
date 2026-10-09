@@ -15,6 +15,9 @@ export type UploadedFileInfo = {
   storagePath: string;
   mimeType: string;
   sizeBytes: number;
+  // Qual documento do checklist é este arquivo (ex: "CNH"); null para
+  // "Outros documentos".
+  documentLabel?: string | null;
 };
 
 export type ActionResult = { success: true } | { success: false; error: string };
@@ -106,6 +109,7 @@ export async function registerServiceFiles(
       size_bytes: file.sizeBytes,
       uploaded_by: profile.id,
       category,
+      document_label: file.documentLabel?.trim().slice(0, 120) || null,
     });
 
     if (error) {
@@ -121,7 +125,9 @@ export async function registerServiceFiles(
       user_id: profile.id,
       action:
         category === "CONCLUSAO" ? "DOCUMENTO_ENTREGUE" : "DOCUMENTO_ANEXADO",
-      description: file.originalName,
+      description: file.documentLabel
+        ? `${file.documentLabel}: ${file.originalName}`
+        : file.originalName,
     });
   }
 

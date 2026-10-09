@@ -34,7 +34,9 @@ export function validateFiles(files: File[]): Result {
 export async function uploadServiceFiles(
   serviceRequestId: string,
   category: FileCategory,
-  files: File[]
+  files: File[],
+  // Mesmo tamanho de `files`: o documento do checklist de cada arquivo.
+  labels?: (string | null)[]
 ): Promise<Result> {
   const validation = validateFiles(files);
   if (!validation.success) return validation;
@@ -49,7 +51,7 @@ export async function uploadServiceFiles(
       .remove(uploaded.map((f) => f.storagePath));
   }
 
-  for (const file of files) {
+  for (const [index, file] of files.entries()) {
     const safeName = `${Date.now()}-${Math.random()
       .toString(36)
       .slice(2)}.${fileExtension(file.name)}`;
@@ -70,6 +72,7 @@ export async function uploadServiceFiles(
       storagePath,
       mimeType: file.type,
       sizeBytes: file.size,
+      documentLabel: labels?.[index] ?? null,
     });
   }
 

@@ -66,12 +66,14 @@ type StatusActionsProps = {
   serviceRequestId: string;
   status: ServiceStatus;
   plate: string;
+  isAdmin: boolean;
 };
 
 export default function StatusActions({
   serviceRequestId,
   status,
   plate,
+  isAdmin,
 }: StatusActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -204,9 +206,14 @@ export default function StatusActions({
           >
             Pendência de documento
           </Button>
-          <Button disabled={loading} onClick={() => setShowFinishDialog(true)}>
-            Finalizar Serviço
-          </Button>
+          {isAdmin && (
+            <Button
+              disabled={loading}
+              onClick={() => setShowFinishDialog(true)}
+            >
+              Finalizar Serviço
+            </Button>
+          )}
         </>
       )}
 
@@ -225,9 +232,14 @@ export default function StatusActions({
           >
             Documento recebido — voltar para A Fazer
           </Button>
-          <Button disabled={loading} onClick={() => setShowFinishDialog(true)}>
-            Finalizar Serviço
-          </Button>
+          {isAdmin && (
+            <Button
+              disabled={loading}
+              onClick={() => setShowFinishDialog(true)}
+            >
+              Finalizar Serviço
+            </Button>
+          )}
         </>
       )}
 

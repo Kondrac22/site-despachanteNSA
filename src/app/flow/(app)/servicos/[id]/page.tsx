@@ -14,6 +14,7 @@ import UrgentToggle from "@/components/flow/UrgentToggle";
 import AttachServiceFiles from "@/components/flow/AttachServiceFiles";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceRequestDetail } from "@/lib/queries/service-requests";
+import { formatBytes } from "@/lib/constants/files";
 import {
   STATUS_LABEL,
   type ServiceStatus,
@@ -40,12 +41,6 @@ function formatDateTime(value: string | null) {
 
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default async function ServiceDetailPage({
@@ -113,6 +108,11 @@ export default async function ServiceDetailPage({
             className="flex items-center justify-between rounded-md border p-2 text-sm"
           >
             <span>
+              {file.document_label && (
+                <span className="mr-2 rounded bg-muted px-1.5 py-0.5 text-xs font-medium">
+                  {file.document_label}
+                </span>
+              )}
               {file.original_name}{" "}
               <span className="text-xs text-muted-foreground">
                 ({formatBytes(file.size_bytes)})
@@ -284,6 +284,7 @@ export default async function ServiceDetailPage({
             serviceRequestId={serviceRequest.id}
             status={serviceRequest.status as ServiceStatus}
             plate={serviceRequest.plate}
+            isAdmin={isAdmin}
           />
           {canToggleUrgent && (
             <div className="border-t pt-4">
