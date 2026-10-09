@@ -29,6 +29,8 @@ const ACTION_LABEL: Record<string, string> = {
   SAIDA_ESTOQUE: "Saída do estoque",
   EDITADO: "Serviço editado",
   URGENCIA: "Urgência alterada",
+  EMAIL_ENVIADO: "E-mail de conclusão enviado",
+  EMAIL_FALHOU: "Falha no e-mail de conclusão",
 };
 
 function formatDateTime(value: string | null) {

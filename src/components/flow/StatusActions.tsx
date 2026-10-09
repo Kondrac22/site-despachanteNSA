@@ -30,6 +30,7 @@ import {
   confirmDuplicateVehicleEntry,
 } from "@/lib/actions/service-request-status";
 import { uploadServiceFiles } from "@/lib/upload-service-files";
+import { sendCompletionEmail } from "@/lib/actions/send-completion-email";
 import { ACCEPT_ATTRIBUTE } from "@/lib/constants/files";
 import type { ServiceStatus } from "@/lib/constants/service-status";
 
@@ -124,29 +125,50 @@ export default function StatusActions({
   // (ex: saída de veículo que não está no estoque), nenhum arquivo é
   // enviado à toa. Se o anexo falhar, o serviço continua finalizado e o
   // documento pode ser anexado depois, pelo card de Documentos.
+  // O e-mail ao solicitante só sai depois do anexo, para ir com ele. Se o
+  // anexo falhar, o e-mail sai quando o documento for anexado de novo.
   async function handleConfirmFinish() {
     const ok = await handleChange("FINALIZADO");
     if (!ok) return;
     setShowFinishDialog(false);
+    setLoading(true);
 
     if (finishFiles.length > 0) {
-      setLoading(true);
       const result = await uploadServiceFiles(
         serviceRequestId,
         "CONCLUSAO",
         finishFiles
       );
-      setLoading(false);
       if (!result.success) {
+        setLoading(false);
         toast.error(
-          `Serviço finalizado, mas o anexo falhou: ${result.error} Tente anexar de novo em Documentos.`
+          `Serviço finalizado, mas o anexo falhou: ${result.error} Anexe de novo em Documentos — o e-mail ao solicitante será enviado junto.`
         );
-      } else {
-        toast.success("Documento de conclusão anexado.");
+        setFinishFiles([]);
+        router.refresh();
+        return;
       }
-      router.refresh();
+      toast.success("Documento de conclusão anexado.");
     }
+
+    await notifyRequester();
+    setLoading(false);
     setFinishFiles([]);
+    router.refresh();
+  }
+
+  async function notifyRequester() {
+    const result = await sendCompletionEmail(serviceRequestId);
+    if (!result.success) {
+      toast.error(`O e-mail ao solicitante não foi enviado: ${result.error}`);
+      return;
+    }
+    toast.success(`E-mail de conclusão enviado para ${result.to}.`);
+    if (result.skipped.length > 0) {
+      toast.warning(
+        `Não couberam no e-mail: ${result.skipped.join(", ")}. Eles continuam na página do serviço.`
+      );
+    }
   }
 
   async function handleConfirmDuplicate() {

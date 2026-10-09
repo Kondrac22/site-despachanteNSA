@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { uploadServiceFiles } from "@/lib/upload-service-files";
+import { sendCompletionEmail } from "@/lib/actions/send-completion-email";
 import { ACCEPT_ATTRIBUTE } from "@/lib/constants/files";
 import type { FileCategory } from "@/lib/actions/register-service-files";
 
@@ -33,7 +34,7 @@ const TEXTS: Record<
     button: "+ Anexar documento entregue",
     title: "Anexar documento entregue",
     description:
-      "Ex: CRLV emitido. O solicitante vai ver o arquivo na página do serviço.",
+      "Ex: CRLV emitido. O solicitante vai ver o arquivo na página do serviço e recebê-lo por e-mail.",
     success: "Documento de conclusão anexado.",
   },
 };
@@ -60,14 +61,27 @@ export default function AttachServiceFiles({
     setError(null);
     setSending(true);
     const result = await uploadServiceFiles(serviceRequestId, category, files);
-    setSending(false);
 
     if (!result.success) {
+      setSending(false);
       setError(result.error);
       return;
     }
 
     toast.success(texts.success);
+
+    // Documento entregue depois da finalização também vai por e-mail ao
+    // solicitante (ex: o anexo falhou na hora de finalizar).
+    if (category === "CONCLUSAO") {
+      const email = await sendCompletionEmail(serviceRequestId);
+      if (email.success) {
+        toast.success(`E-mail enviado para ${email.to}.`);
+      } else {
+        toast.error(`O e-mail ao solicitante não foi enviado: ${email.error}`);
+      }
+    }
+
+    setSending(false);
     setOpen(false);
     setFiles([]);
     router.refresh();
