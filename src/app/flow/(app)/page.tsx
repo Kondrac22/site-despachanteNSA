@@ -26,6 +26,7 @@ export default async function DashboardPage({
     serviceType?: string;
     period?: string;
     urgent?: string;
+    showFinished?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -36,7 +37,21 @@ export default async function DashboardPage({
     serviceType: params.serviceType,
     period: params.period,
     urgent: params.urgent,
+    showFinished: params.showFinished,
   };
+
+  const showFinished = params.showFinished === "1";
+  const toggleFinishedParams = new URLSearchParams(
+    Object.entries(params).filter(
+      (entry): entry is [string, string] =>
+        typeof entry[1] === "string" && entry[0] !== "showFinished"
+    )
+  );
+  if (!showFinished) toggleFinishedParams.set("showFinished", "1");
+  const toggleFinishedQuery = toggleFinishedParams.toString();
+  const toggleFinishedHref = toggleFinishedQuery
+    ? `/flow?${toggleFinishedQuery}`
+    : "/flow";
 
   const [filterOptions, indicators, recentRequests, currentStock] =
     await Promise.all([
@@ -127,12 +142,23 @@ export default async function DashboardPage({
         <section className="rounded-lg border bg-background p-4 shadow-sm lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold">Serviços recentes</h2>
-            <Link
-              href="/flow/servicos"
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              Ver todos
-            </Link>
+            <div className="flex items-center gap-4">
+              {!filters.status && (
+                <Link
+                  href={toggleFinishedHref}
+                  scroll={false}
+                  className="text-sm font-medium text-muted-foreground hover:text-primary hover:underline"
+                >
+                  {showFinished ? "Ocultar finalizados" : "Mostrar finalizados"}
+                </Link>
+              )}
+              <Link
+                href="/flow/servicos"
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Ver todos
+              </Link>
+            </div>
           </div>
           {recentRequests.length === 0 ? (
             <p className="text-sm text-muted-foreground">
@@ -150,7 +176,6 @@ export default async function DashboardPage({
                     <th className="py-2 pr-2">Motivo</th>
                     <th className="py-2 pr-2">Solicitante</th>
                     <th className="py-2 pr-2">Data</th>
-                    <th className="py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -164,7 +189,12 @@ export default async function DashboardPage({
                       >
                         <td className="py-2 pr-2 font-mono text-xs">
                           <div className="flex flex-wrap items-center gap-2">
-                            {request.protocol ?? "—"}
+                            <Link
+                              href={`/flow/servicos/${request.id}`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {request.protocol ?? "—"}
+                            </Link>
                             {urgent && <UrgentBadge />}
                           </div>
                         </td>
@@ -195,14 +225,6 @@ export default async function DashboardPage({
                         </td>
                         <td className="py-2 pr-2">
                           {formatDate(request.requested_at)}
-                        </td>
-                        <td className="py-2">
-                          <Link
-                            href={`/flow/servicos/${request.id}`}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            Ver
-                          </Link>
                         </td>
                       </tr>
                     );

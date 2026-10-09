@@ -7,6 +7,7 @@ export type DashboardFilters = {
   serviceType?: string;
   period?: string;
   urgent?: string;
+  showFinished?: string;
 };
 
 function periodStartDate(period?: string): string | null {
@@ -127,7 +128,11 @@ export async function getRecentServiceRequests(filters: DashboardFilters) {
     .limit(10);
 
   query = applyBaseFilters(query, filters);
+  // Finalizados ficam escondidos, a menos que o usuário peça para vê-los
+  // (botão "Mostrar finalizados" ou filtro de status).
   if (filters.status) query = query.eq("status", filters.status);
+  else if (filters.showFinished !== "1")
+    query = query.neq("status", "FINALIZADO");
 
   const { data, error } = await query;
   if (error) {
