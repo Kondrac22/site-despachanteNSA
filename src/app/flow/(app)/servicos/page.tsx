@@ -24,11 +24,13 @@ export default async function ServicosPage({
     serviceType?: string;
     period?: string;
     urgent?: string;
+    showFinished?: string;
     page?: string;
   }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
+  const showFinished = params.showFinished === "1";
 
   const [filterOptions, { rows, total }] = await Promise.all([
     getFilterOptions(),
@@ -41,6 +43,7 @@ export default async function ServicosPage({
         serviceType: params.serviceType,
         period: params.period,
         urgent: params.urgent,
+        showFinished: params.showFinished,
       },
       page,
       PAGE_SIZE
@@ -58,9 +61,26 @@ export default async function ServicosPage({
     if (params.serviceType) query.set("serviceType", params.serviceType);
     if (params.period) query.set("period", params.period);
     if (params.urgent) query.set("urgent", params.urgent);
+    if (showFinished) query.set("showFinished", "1");
     query.set("page", String(targetPage));
     return `/flow/servicos?${query.toString()}`;
   }
+
+  // Mantém os filtros atuais e liga/desliga os finalizados (volta pra
+  // página 1).
+  const toggleFinishedParams = new URLSearchParams(
+    Object.entries(params).filter(
+      (entry): entry is [string, string] =>
+        typeof entry[1] === "string" &&
+        entry[0] !== "showFinished" &&
+        entry[0] !== "page"
+    )
+  );
+  if (!showFinished) toggleFinishedParams.set("showFinished", "1");
+  const toggleFinishedQuery = toggleFinishedParams.toString();
+  const toggleFinishedHref = toggleFinishedQuery
+    ? `/flow/servicos?${toggleFinishedQuery}`
+    : "/flow/servicos";
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 p-6">
@@ -70,6 +90,17 @@ export default async function ServicosPage({
           <p className="text-sm text-muted-foreground">
             {total} serviço{total === 1 ? "" : "s"} encontrado
             {total === 1 ? "" : "s"}.
+            {!params.status && (
+              <>
+                {" "}
+                <Link
+                  href={toggleFinishedHref}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {showFinished ? "Ocultar finalizados" : "Mostrar finalizados"}
+                </Link>
+              </>
+            )}
           </p>
         </div>
         <Button asChild>
@@ -95,14 +126,13 @@ export default async function ServicosPage({
               <th className="p-3">Data</th>
               <th className="p-3">Solicitante</th>
               <th className="p-3">Finalização</th>
-              <th className="p-3"></th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={8}
                   className="p-6 text-center text-muted-foreground"
                 >
                   Nenhum serviço encontrado para os filtros selecionados.
@@ -118,7 +148,12 @@ export default async function ServicosPage({
                 >
                   <td className="p-3 font-mono text-xs">
                     <div className="flex flex-wrap items-center gap-2">
-                      {row.protocol ?? "—"}
+                      <Link
+                        href={`/flow/servicos/${row.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {row.protocol ?? "—"}
+                      </Link>
                       {urgent && <UrgentBadge />}
                     </div>
                   </td>
@@ -142,14 +177,6 @@ export default async function ServicosPage({
                   <td className="p-3">{formatDate(row.requested_at)}</td>
                   <td className="p-3">{row.profiles?.name ?? "—"}</td>
                   <td className="p-3">{formatDate(row.finished_at)}</td>
-                  <td className="p-3">
-                    <Link
-                      href={`/flow/servicos/${row.id}`}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      Ver
-                    </Link>
-                  </td>
                 </tr>
               );
             })}
