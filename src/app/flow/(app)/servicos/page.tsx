@@ -73,14 +73,14 @@ export default async function ServicosPage({
     <div className="container mx-auto max-w-6xl space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Serviços</h1>
+          <h1 className="text-2xl font-semibold">Acompanhamento</h1>
           <p className="text-sm text-muted-foreground">
             {total} serviço{total === 1 ? "" : "s"} encontrado
             {total === 1 ? "" : "s"}.
           </p>
         </div>
         <Button asChild>
-          <Link href="/flow/solicitar">+ Solicitar Serviço</Link>
+          <Link href="/flow/solicitar">+ Nova Solicitação</Link>
         </Button>
       </div>
 

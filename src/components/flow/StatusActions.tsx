@@ -48,14 +48,14 @@ const REASON_DIALOG: Record<
   PARADO: {
     title: "Motivo da parada",
     description: (plate) =>
-      `Explique por que o serviço da placa ${plate} está sendo marcado como parado. Esse motivo fica visível no histórico e no Dashboard.`,
+      `Explique por que o serviço da placa ${plate} está sendo marcado como parado. Esse motivo fica visível no histórico e no Painel.`,
     label: "Motivo *",
     placeholder: "Ex: Falta documento X, aguardando retorno do cliente...",
   },
   PENDENTE_DOCUMENTO: {
     title: "Pendência de documento",
     description: (plate) =>
-      `Informe qual documento está faltando para o serviço da placa ${plate}. Essa informação fica visível no histórico e no Dashboard.`,
+      `Informe qual documento está faltando para o serviço da placa ${plate}. Essa informação fica visível no histórico e no Painel.`,
     label: "Documento pendente *",
     placeholder: "Ex: Comprovante de residência, procuração assinada...",
   },

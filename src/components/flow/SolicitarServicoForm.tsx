@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { createServiceRequest } from "@/lib/actions/create-service-request";
 import { uploadServiceFiles, validateFiles } from "@/lib/upload-service-files";
 import { ACCEPT_ATTRIBUTE } from "@/lib/constants/files";
@@ -42,10 +50,12 @@ export default function SolicitarServicoForm({
   const [submitting, setSubmitting] = useState(false);
   const [serviceTypeId, setServiceTypeId] = useState("");
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [showMissingDialog, setShowMissingDialog] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const checklist =
     serviceTypes.find((t) => t.id === serviceTypeId)?.document_checklist ?? [];
-  const checklistComplete = checklist.every((item) => checkedItems.has(item));
+  const missingItems = checklist.filter((item) => !checkedItems.has(item));
 
   function handleServiceTypeChange(value: string) {
     setServiceTypeId(value);
@@ -61,16 +71,24 @@ export default function SolicitarServicoForm({
     });
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  // Documento faltando não bloqueia: pede confirmação num popup e o
+  // serviço é criado com status "Pendência de documento".
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    if (!checklistComplete) {
-      setError("Confirme todos os documentos do checklist antes de enviar.");
+    if (missingItems.length > 0) {
+      setShowMissingDialog(true);
       return;
     }
+    submitForm();
+  }
 
-    const formData = new FormData(e.currentTarget);
+  async function submitForm() {
+    if (!formRef.current) return;
+    setShowMissingDialog(false);
+
+    const formData = new FormData(formRef.current);
 
     // Os arquivos não vão junto com o formulário (a server action tem
     // limite de 1 MB): o serviço é criado primeiro e depois os arquivos
@@ -122,10 +140,10 @@ export default function SolicitarServicoForm({
   return (
     <Card className="mx-auto max-w-2xl">
       <CardHeader>
-        <CardTitle>Solicitar Serviço</CardTitle>
+        <CardTitle>Nova Solicitação</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="plate">Placa *</Label>
             <Input
@@ -162,10 +180,11 @@ export default function SolicitarServicoForm({
           {checklist.length > 0 && (
             <fieldset className="space-y-2 rounded-md border p-4">
               <legend className="px-1 text-sm font-medium">
-                Checklist de documentos *
+                Checklist de documentos
               </legend>
               <p className="text-xs text-muted-foreground">
-                Confirme que você tem em mãos cada documento abaixo.
+                Marque os documentos que você tem em mãos. Se faltar algum, o
+                serviço será criado com pendência de documento.
               </p>
               {checklist.map((item, index) => (
                 <label
@@ -247,11 +266,40 @@ export default function SolicitarServicoForm({
           <Button
             type="submit"
             className="w-full"
-            disabled={submitting || !checklistComplete}
+            disabled={submitting}
           >
             {submitting ? "Enviando..." : "Solicitar"}
           </Button>
         </form>
+
+        {/* Popup: confirma os documentos que faltam */}
+        <Dialog open={showMissingDialog} onOpenChange={setShowMissingDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Documentos faltando</DialogTitle>
+              <DialogDescription>
+                O serviço será criado com status 🔵 Pendência de documento.
+                Confirme os documentos que estão faltando:
+              </DialogDescription>
+            </DialogHeader>
+
+            <ul className="list-disc space-y-1 pl-5 text-sm font-medium text-blue-700">
+              {missingItems.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowMissingDialog(false)}
+              >
+                Voltar e revisar
+              </Button>
+              <Button onClick={submitForm}>Criar com pendência</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

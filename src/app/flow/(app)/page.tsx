@@ -77,7 +77,7 @@ export default async function DashboardPage({
       <CreatedToast />
 
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <h1 className="text-2xl font-semibold">Painel</h1>
         <p className="text-sm text-muted-foreground">
           Visão geral dos serviços e do estoque de veículos.
         </p>

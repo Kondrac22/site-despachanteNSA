@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isValidPlate, normalizePlate } from "@/lib/validation/plate";
+import type { ServiceStatus } from "@/lib/constants/service-status";
 
 // Os documentos não passam por aqui: depois de criar o serviço, o
 // navegador envia os arquivos direto pro Storage (a server action tem
@@ -70,14 +71,17 @@ export async function createServiceRequest(
   }
 
   // Confirmação manual do usuário (não verifica os arquivos anexados).
+  // Documento não marcado não impede a solicitação: o serviço nasce com
+  // pendência de documento e o que falta fica registrado no motivo.
   const checklist: string[] = serviceType.document_checklist ?? [];
   const confirmedItems = formData.getAll("checklist").map(String);
-  if (!checklist.every((item) => confirmedItems.includes(item))) {
-    return {
-      success: false,
-      error: "Confirme todos os documentos do checklist antes de enviar.",
-    };
-  }
+  const missingItems = checklist.filter(
+    (item) => !confirmedItems.includes(item)
+  );
+  const status: ServiceStatus =
+    missingItems.length > 0 ? "PENDENTE_DOCUMENTO" : "A_FAZER";
+  const missingReason =
+    missingItems.length > 0 ? missingItems.join("; ") : null;
 
   // Busca o código da unidade pra gerar o protocolo (ex: MTZ-0001).
   const { data: unit } = await supabase
@@ -128,7 +132,8 @@ export async function createServiceRequest(
       requested_at: requestedAt,
       created_by: profile.id,
       unit_id: profile.unit_id,
-      status: "A_FAZER",
+      status,
+      stopped_reason: missingReason,
       notes: notes || null,
       is_urgent: isUrgent,
     })
@@ -150,13 +155,14 @@ export async function createServiceRequest(
     description: [
       `Protocolo ${protocol}`,
       isUrgent ? "Marcado como urgente" : null,
-      checklist.length > 0
+      checklist.length > 0 && missingItems.length === 0
         ? `Checklist de documentos confirmado (${checklist.length} itens)`
         : null,
+      missingReason ? `Documento pendente: ${missingReason}` : null,
     ]
       .filter(Boolean)
       .join(" · "),
-    new_value: "A_FAZER",
+    new_value: status,
   });
 
   revalidatePath("/flow");

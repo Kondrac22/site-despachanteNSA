@@ -21,11 +21,11 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
   const router = useRouter();
 
   const navLinks = [
-    { href: "/flow", label: "Dashboard" },
-    { href: "/flow/solicitar", label: "Solicitar Serviço" },
-    { href: "/flow/servicos", label: "Serviços" },
+    { href: "/flow", label: "Painel" },
+    { href: "/flow/solicitar", label: "Nova Solicitação" },
+    { href: "/flow/servicos", label: "Acompanhamento" },
     { href: "/flow/estoque", label: "Estoque de Veículos" },
-    { href: "/flow/historico", label: "Histórico" },
+    { href: "/flow/historico", label: "Concluídos" },
     ...(isAdmin
       ? [
           { href: "/flow/financeiro", label: "Financeiro" },
@@ -35,7 +35,7 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
   ];
 
   // Também marca o item como ativo nas subpáginas (ex: as abas de
-  // Configurações). O Dashboard ("/flow") só quando é exatamente ele.
+  // Configurações). O Painel ("/flow") só quando é exatamente ele.
   function isActive(href: string) {
     if (href === "/flow") return pathname === href;
     return pathname === href || pathname.startsWith(`${href}/`);
