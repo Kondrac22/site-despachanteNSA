@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 type Option = { id: string; name: string };
 
@@ -52,31 +53,37 @@ export default function DashboardFilters({
 
   function FilterSelect({
     paramKey,
-    placeholder,
+    label,
     options,
   }: {
     paramKey: string;
-    placeholder: string;
+    label: string;
     options: Option[];
   }) {
     const currentValue = searchParams.get(paramKey) ?? ALL;
+    const id = `dashboard-filter-${paramKey}`;
     return (
-      <Select
-        value={currentValue}
-        onValueChange={(value) => updateFilter(paramKey, value)}
-      >
-        <SelectTrigger className="w-full sm:w-[190px]">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL}>Todos</SelectItem>
-          {options.map((option) => (
-            <SelectItem key={option.id} value={option.id}>
-              {option.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="w-full space-y-1.5 sm:w-[190px]">
+        <Label htmlFor={id} className="text-xs text-muted-foreground">
+          {label}
+        </Label>
+        <Select
+          value={currentValue}
+          onValueChange={(value) => updateFilter(paramKey, value)}
+        >
+          <SelectTrigger id={id} className="w-full">
+            <SelectValue placeholder={label} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Todos</SelectItem>
+            {options.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     );
   }
 
@@ -84,28 +91,28 @@ export default function DashboardFilters({
     <div className="flex flex-wrap gap-3">
       <FilterSelect
         paramKey="requester"
-        placeholder="Solicitante"
+        label="Solicitante"
         options={requesters}
       />
-      <FilterSelect paramKey="unit" placeholder="Unidade" options={units} />
+      <FilterSelect paramKey="unit" label="Unidade" options={units} />
       <FilterSelect
         paramKey="status"
-        placeholder="Status"
+        label="Status"
         options={STATUS_OPTIONS}
       />
       <FilterSelect
         paramKey="period"
-        placeholder="Período"
+        label="Período"
         options={PERIOD_OPTIONS}
       />
       <FilterSelect
         paramKey="serviceType"
-        placeholder="Tipo de Serviço"
+        label="Tipo de Serviço"
         options={serviceTypes}
       />
       <FilterSelect
         paramKey="urgent"
-        placeholder="Urgência"
+        label="Urgência"
         options={URGENT_OPTIONS}
       />
     </div>

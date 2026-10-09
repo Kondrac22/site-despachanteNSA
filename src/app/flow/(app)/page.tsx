@@ -66,12 +66,6 @@ export default async function DashboardPage({
     { label: "Parados", value: indicators.parado, accent: "text-red-600" },
     { label: "A Fazer", value: indicators.aFazer, accent: "text-green-600" },
     {
-      label: "Finalizados",
-      value: indicators.finalizado,
-      accent: "text-muted-foreground",
-    },
-    { label: "Total", value: indicators.total, accent: "text-primary" },
-    {
       label: "Veículos em Estoque",
       value: indicators.vehiclesInStock,
       accent: "text-primary",
@@ -95,7 +89,7 @@ export default async function DashboardPage({
         requesters={filterOptions.requesters}
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((card) => {
           const content = (
             <>

@@ -3,11 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import {
   MONTHS,
   getFinancialReport,
+  getFinancialUnits,
   resolvePeriod,
 } from "@/lib/queries/financial";
 import { buildCsv, csvDateTime, csvNumber, csvResponse } from "@/lib/csv";
 
-// Exporta exatamente o período filtrado na tela do Financeiro.
+// Exporta exatamente o período (e a unidade) filtrados na tela do Financeiro.
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {
@@ -32,8 +33,17 @@ export async function GET(request: Request) {
     year: searchParams.get("year"),
   });
 
-  const { rows, unitTotals, total } = await getFinancialReport(year, month);
-  const periodLabel = `${MONTHS[month - 1]} de ${year}`;
+  const units = await getFinancialUnits();
+  const unit = units.find((u) => u.id === searchParams.get("unit")) ?? null;
+
+  const { rows, unitTotals, total } = await getFinancialReport(
+    year,
+    month,
+    unit?.id,
+  );
+  const periodLabel = `${MONTHS[month - 1]} de ${year}${
+    unit ? ` — ${unit.name}` : ""
+  }`;
 
   const csv = buildCsv([
     [`Relatório financeiro — ${periodLabel}`],

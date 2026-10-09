@@ -80,11 +80,9 @@ export async function getDashboardIndicators(filters: DashboardFilters) {
     return count ?? 0;
   }
 
-  const [parado, aFazer, finalizado, total, urgentes] = await Promise.all([
+  const [parado, aFazer, urgentes] = await Promise.all([
     countByStatus("PARADO"),
     countByStatus("A_FAZER"),
-    countByStatus("FINALIZADO"),
-    countByStatus(),
     countUrgentOpen(),
   ]);
 
@@ -103,7 +101,7 @@ export async function getDashboardIndicators(filters: DashboardFilters) {
     (type) => type === "ENTRY"
   ).length;
 
-  return { parado, aFazer, finalizado, total, urgentes, vehiclesInStock };
+  return { parado, aFazer, urgentes, vehiclesInStock };
 }
 
 export async function getRecentServiceRequests(filters: DashboardFilters) {

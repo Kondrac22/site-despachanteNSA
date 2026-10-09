@@ -12,8 +12,11 @@ import { createClient } from "@/lib/supabase/server";
 import {
   MONTHS,
   getFinancialReport,
+  getFinancialUnits,
   resolvePeriod,
 } from "@/lib/queries/financial";
+
+const ALL_UNITS = "TODAS";
 
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -28,7 +31,7 @@ function formatDate(value: string) {
 export default async function FinanceiroPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; year?: string }>;
+  searchParams: Promise<{ month?: string; year?: string; unit?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -55,10 +58,20 @@ export default async function FinanceiroPage({
 
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
+  const units = await getFinancialUnits();
+  // Só aceita unidades que existem; qualquer outro valor vira "todas".
+  const selectedUnit = units.find((u) => u.id === params.unit) ?? null;
+
   const { rows, unitTotals, total, missingPriceCount } =
-    await getFinancialReport(selectedYear, selectedMonth);
+    await getFinancialReport(selectedYear, selectedMonth, selectedUnit?.id);
 
   const periodLabel = `${MONTHS[selectedMonth - 1]} de ${selectedYear}`;
+
+  const exportParams = new URLSearchParams({
+    month: String(selectedMonth),
+    year: String(selectedYear),
+  });
+  if (selectedUnit) exportParams.set("unit", selectedUnit.id);
 
   return (
     <div className="container mx-auto max-w-5xl space-y-6 p-6">
@@ -72,7 +85,7 @@ export default async function FinanceiroPage({
         {/* <a> em vez de <Link>: é um download, não uma navegação. */}
         <Button asChild variant="outline">
           <a
-            href={`/flow/financeiro/exportar?month=${selectedMonth}&year=${selectedYear}`}
+            href={`/flow/financeiro/exportar?${exportParams.toString()}`}
             download
           >
             Exportar para Excel
@@ -105,6 +118,19 @@ export default async function FinanceiroPage({
             ))}
           </SelectContent>
         </Select>
+        <Select name="unit" defaultValue={selectedUnit?.id ?? ALL_UNITS}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="Unidade" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_UNITS}>Todas as unidades</SelectItem>
+            {units.map((unit) => (
+              <SelectItem key={unit.id} value={unit.id}>
+                {unit.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button type="submit" variant="secondary">
           Filtrar
         </Button>
@@ -112,7 +138,10 @@ export default async function FinanceiroPage({
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <div className="rounded-lg border bg-background p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Total — {periodLabel}</p>
+          <p className="text-sm text-muted-foreground">
+            Total — {periodLabel}
+            {selectedUnit && ` — ${selectedUnit.name}`}
+          </p>
           <p className="mt-1 text-3xl font-bold text-primary">
             {formatCurrency(total)}
           </p>
@@ -121,28 +150,30 @@ export default async function FinanceiroPage({
             {rows.length === 1 ? "" : "s"}
           </p>
         </div>
-        {unitTotals.map((unit) => (
-          <div
-            key={unit.unitName}
-            className="rounded-lg border bg-background p-4 shadow-sm"
-          >
-            <p className="text-sm text-muted-foreground">{unit.unitName}</p>
-            <p className="mt-1 text-3xl font-bold">
-              {formatCurrency(unit.total)}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {unit.count} serviço{unit.count === 1 ? "" : "s"}
-            </p>
-          </div>
-        ))}
+        {!selectedUnit &&
+          unitTotals.map((unit) => (
+            <div
+              key={unit.unitName}
+              className="rounded-lg border bg-background p-4 shadow-sm"
+            >
+              <p className="text-sm text-muted-foreground">{unit.unitName}</p>
+              <p className="mt-1 text-3xl font-bold">
+                {formatCurrency(unit.total)}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {unit.count} serviço{unit.count === 1 ? "" : "s"}
+              </p>
+            </div>
+          ))}
       </div>
 
       {missingPriceCount > 0 && (
         <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
-          {missingPriceCount} serviço{missingPriceCount === 1 ? "" : "s"}{" "}
-          deste período não {missingPriceCount === 1 ? "tem" : "têm"} valor
-          registrado (foram finalizados antes do cadastro de valores) e
-          {missingPriceCount === 1 ? " entra" : " entram"} no total como R$ 0,00.
+          {missingPriceCount} serviço{missingPriceCount === 1 ? "" : "s"} deste
+          período não {missingPriceCount === 1 ? "tem" : "têm"} valor registrado
+          (foram finalizados antes do cadastro de valores) e
+          {missingPriceCount === 1 ? " entra" : " entram"} no total como R$
+          0,00.
         </div>
       )}
 
@@ -166,15 +197,14 @@ export default async function FinanceiroPage({
                   colSpan={7}
                   className="p-6 text-center text-muted-foreground"
                 >
-                  Nenhum serviço finalizado em {periodLabel}.
+                  Nenhum serviço finalizado em {periodLabel}
+                  {selectedUnit && ` na unidade ${selectedUnit.name}`}.
                 </td>
               </tr>
             )}
             {rows.map((row) => (
               <tr key={row.id} className="border-b last:border-0">
-                <td className="p-3 font-mono text-xs">
-                  {row.protocol ?? "—"}
-                </td>
+                <td className="p-3 font-mono text-xs">{row.protocol ?? "—"}</td>
                 <td className="p-3 font-medium">{row.plate}</td>
                 <td className="p-3">{row.serviceTypeName ?? "—"}</td>
                 <td className="p-3">{row.unitName ?? "—"}</td>

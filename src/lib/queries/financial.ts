@@ -71,21 +71,41 @@ function monthRange(year: number, month: number) {
   };
 }
 
-export async function getFinancialReport(year: number, month: number) {
+// Todas as unidades, inclusive inativas: uma unidade desativada ainda pode
+// ter serviços finalizados em meses anteriores.
+export async function getFinancialUnits() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("units")
+    .select("id, name")
+    .order("name");
+  return (data ?? []) as { id: string; name: string }[];
+}
+
+// unitId opcional: quando informado, o relatório considera só essa unidade.
+export async function getFinancialReport(
+  year: number,
+  month: number,
+  unitId?: string | null,
+) {
   const supabase = await createClient();
   const { start, end } = monthRange(year, month);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("service_requests")
     .select(
       `id, protocol, plate, finished_at, charged_amount,
        service_types ( name ),
-       units ( name )`
+       units ( name )`,
     )
     .eq("status", "FINALIZADO")
     .gte("finished_at", start)
     .lt("finished_at", end)
     .order("finished_at", { ascending: false });
+
+  if (unitId) query = query.eq("unit_id", unitId);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("getFinancialReport error:", error.message);
