@@ -2,16 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-
-type Status = "PARADO" | "A_FAZER" | "FINALIZADO";
+import {
+  STATUS_WITH_REASON,
+  type ServiceStatus as Status,
+} from "@/lib/constants/service-status";
 
 export type ChangeStatusResult =
   | { success: true; duplicateConfirmNeeded?: boolean; plate?: string }
   | { success: false; error: string };
 
 const ALLOWED_TRANSITIONS: Record<Status, Status[]> = {
-  A_FAZER: ["PARADO", "FINALIZADO"],
+  A_FAZER: ["PARADO", "PENDENTE_DOCUMENTO", "FINALIZADO"],
   PARADO: ["A_FAZER"],
+  PENDENTE_DOCUMENTO: ["A_FAZER", "FINALIZADO"],
   FINALIZADO: [],
 };
 
@@ -73,12 +76,15 @@ export async function changeServiceStatus(
   }
 
   let reason: string | null = null;
-  if (newStatus === "PARADO") {
+  if (STATUS_WITH_REASON.includes(newStatus)) {
     reason = options?.reason?.trim() ?? "";
     if (reason.length < 3) {
       return {
         success: false,
-        error: "Informe o motivo da parada (mínimo 3 caracteres).",
+        error:
+          newStatus === "PARADO"
+            ? "Informe o motivo da parada (mínimo 3 caracteres)."
+            : "Informe qual documento está pendente (mínimo 3 caracteres).",
       };
     }
   }
@@ -152,7 +158,7 @@ export async function changeServiceStatus(
       status: newStatus,
       updated_at: new Date().toISOString(),
       finished_at: finishedAt,
-      stopped_reason: newStatus === "PARADO" ? reason : null,
+      stopped_reason: reason,
     })
     .eq("id", serviceRequestId);
 
@@ -162,7 +168,12 @@ export async function changeServiceStatus(
     action: "STATUS_ALTERADO",
     old_value: currentStatus,
     new_value: newStatus,
-    description: newStatus === "PARADO" ? `Motivo: ${reason}` : null,
+    description:
+      newStatus === "PARADO"
+        ? `Motivo: ${reason}`
+        : newStatus === "PENDENTE_DOCUMENTO"
+          ? `Documento pendente: ${reason}`
+          : null,
   });
 
   revalidatePath(`/flow/servicos/${serviceRequestId}`);

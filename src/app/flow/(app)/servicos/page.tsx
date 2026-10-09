@@ -7,12 +7,7 @@ import {
   getServiceRequestsList,
   type ServiceListSort,
 } from "@/lib/queries/service-requests";
-
-const STATUS_LABEL: Record<string, string> = {
-  PARADO: "🔴 Parado",
-  A_FAZER: "🟢 A Fazer",
-  FINALIZADO: "⚪ Finalizado",
-};
+import { REASON_TEXT_CLASS, STATUS_LABEL } from "@/lib/constants/service-status";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -140,9 +135,9 @@ export default async function ServicosPage({
                   <td className="p-3 font-medium">{row.plate}</td>
                   <td className="p-3">{row.service_types?.name ?? "—"}</td>
                   <td className="p-3 max-w-[220px]">
-                    {row.status === "PARADO" && row.stopped_reason ? (
+                    {REASON_TEXT_CLASS[row.status] && row.stopped_reason ? (
                       <span
-                        className="line-clamp-2 text-red-700"
+                        className={`line-clamp-2 ${REASON_TEXT_CLASS[row.status]}`}
                         title={row.stopped_reason}
                       >
                         {row.stopped_reason}

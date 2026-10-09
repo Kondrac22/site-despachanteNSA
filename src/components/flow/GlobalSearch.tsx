@@ -16,12 +16,7 @@ import { searchServices, type SearchResult } from "@/lib/actions/search-services
 import { isValidPlate, normalizePlate } from "@/lib/validation/plate";
 import { cn } from "@/lib/utils";
 import UrgentBadge from "@/components/flow/UrgentBadge";
-
-const STATUS_LABEL: Record<string, string> = {
-  PARADO: "🔴 Parado",
-  A_FAZER: "🟢 A Fazer",
-  FINALIZADO: "⚪ Finalizado",
-};
+import { STATUS_LABEL } from "@/lib/constants/service-status";
 
 type Item = { key: string; href: string; result?: SearchResult; label?: string };
 

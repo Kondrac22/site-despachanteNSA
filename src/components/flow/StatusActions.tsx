@@ -31,10 +31,39 @@ import {
 } from "@/lib/actions/service-request-status";
 import { uploadServiceFiles } from "@/lib/upload-service-files";
 import { ACCEPT_ATTRIBUTE } from "@/lib/constants/files";
+import type { ServiceStatus } from "@/lib/constants/service-status";
+
+// Os dois status que pedem um texto explicando o porquê.
+type ReasonStatus = "PARADO" | "PENDENTE_DOCUMENTO";
+
+const REASON_DIALOG: Record<
+  ReasonStatus,
+  {
+    title: string;
+    description: (plate: string) => string;
+    label: string;
+    placeholder: string;
+  }
+> = {
+  PARADO: {
+    title: "Motivo da parada",
+    description: (plate) =>
+      `Explique por que o serviço da placa ${plate} está sendo marcado como parado. Esse motivo fica visível no histórico e no Dashboard.`,
+    label: "Motivo *",
+    placeholder: "Ex: Falta documento X, aguardando retorno do cliente...",
+  },
+  PENDENTE_DOCUMENTO: {
+    title: "Pendência de documento",
+    description: (plate) =>
+      `Informe qual documento está faltando para o serviço da placa ${plate}. Essa informação fica visível no histórico e no Dashboard.`,
+    label: "Documento pendente *",
+    placeholder: "Ex: Comprovante de residência, procuração assinada...",
+  },
+};
 
 type StatusActionsProps = {
   serviceRequestId: string;
-  status: "PARADO" | "A_FAZER" | "FINALIZADO";
+  status: ServiceStatus;
   plate: string;
 };
 
@@ -46,14 +75,14 @@ export default function StatusActions({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
-  const [showStopDialog, setShowStopDialog] = useState(false);
-  const [stopReason, setStopReason] = useState("");
-  const [stopError, setStopError] = useState<string | null>(null);
+  const [reasonStatus, setReasonStatus] = useState<ReasonStatus | null>(null);
+  const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState<string | null>(null);
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [finishFiles, setFinishFiles] = useState<File[]>([]);
 
   async function handleChange(
-    newStatus: "PARADO" | "A_FAZER" | "FINALIZADO",
+    newStatus: ServiceStatus,
     reason?: string
   ) {
     setLoading(true);
@@ -75,18 +104,21 @@ export default function StatusActions({
     return true;
   }
 
-  async function handleConfirmStop() {
-    if (stopReason.trim().length < 3) {
-      setStopError("Descreva o motivo (mínimo 3 caracteres).");
+  async function handleConfirmReason() {
+    if (!reasonStatus) return;
+    if (reason.trim().length < 3) {
+      setReasonError("Descreva o motivo (mínimo 3 caracteres).");
       return;
     }
-    setStopError(null);
-    const ok = await handleChange("PARADO", stopReason.trim());
+    setReasonError(null);
+    const ok = await handleChange(reasonStatus, reason.trim());
     if (ok) {
-      setShowStopDialog(false);
-      setStopReason("");
+      setReasonStatus(null);
+      setReason("");
     }
   }
+
+  const reasonDialog = reasonStatus ? REASON_DIALOG[reasonStatus] : null;
 
   // Finaliza primeiro e só depois anexa: se a finalização for recusada
   // (ex: saída de veículo que não está no estoque), nenhum arquivo é
@@ -138,9 +170,17 @@ export default function StatusActions({
           <Button
             variant="outline"
             disabled={loading}
-            onClick={() => setShowStopDialog(true)}
+            onClick={() => setReasonStatus("PARADO")}
           >
             Marcar como Parado
+          </Button>
+          <Button
+            variant="outline"
+            className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+            disabled={loading}
+            onClick={() => setReasonStatus("PENDENTE_DOCUMENTO")}
+          >
+            Pendência de documento
           </Button>
           <Button disabled={loading} onClick={() => setShowFinishDialog(true)}>
             Finalizar Serviço
@@ -154,45 +194,58 @@ export default function StatusActions({
         </Button>
       )}
 
+      {status === "PENDENTE_DOCUMENTO" && (
+        <>
+          <Button
+            variant="outline"
+            disabled={loading}
+            onClick={() => handleChange("A_FAZER")}
+          >
+            Documento recebido — voltar para A Fazer
+          </Button>
+          <Button disabled={loading} onClick={() => setShowFinishDialog(true)}>
+            Finalizar Serviço
+          </Button>
+        </>
+      )}
+
       {status === "FINALIZADO" && (
         <p className="text-sm text-muted-foreground">
           Este serviço já foi finalizado.
         </p>
       )}
 
-      {/* Popup: motivo da parada */}
+      {/* Popup: motivo da parada / documento pendente */}
       <Dialog
-        open={showStopDialog}
+        open={reasonStatus !== null}
         onOpenChange={(open) => {
-          setShowStopDialog(open);
           if (!open) {
-            setStopReason("");
-            setStopError(null);
+            setReasonStatus(null);
+            setReason("");
+            setReasonError(null);
           }
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Motivo da parada</DialogTitle>
+            <DialogTitle>{reasonDialog?.title}</DialogTitle>
             <DialogDescription>
-              Explique por que o serviço da placa {plate} está sendo marcado
-              como parado. Esse motivo fica visível no histórico e no
-              Dashboard.
+              {reasonDialog?.description(plate)}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label htmlFor="stop-reason">Motivo *</Label>
+            <Label htmlFor="status-reason">{reasonDialog?.label}</Label>
             <Textarea
-              id="stop-reason"
+              id="status-reason"
               rows={4}
-              value={stopReason}
-              onChange={(e) => setStopReason(e.target.value)}
-              placeholder="Ex: Falta documento X, aguardando retorno do cliente..."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={reasonDialog?.placeholder}
             />
-            {stopError && (
+            {reasonError && (
               <p className="text-sm text-destructive" role="alert">
-                {stopError}
+                {reasonError}
               </p>
             )}
           </div>
@@ -201,11 +254,11 @@ export default function StatusActions({
             <Button
               variant="outline"
               disabled={loading}
-              onClick={() => setShowStopDialog(false)}
+              onClick={() => setReasonStatus(null)}
             >
               Cancelar
             </Button>
-            <Button disabled={loading} onClick={handleConfirmStop}>
+            <Button disabled={loading} onClick={handleConfirmReason}>
               Confirmar
             </Button>
           </DialogFooter>

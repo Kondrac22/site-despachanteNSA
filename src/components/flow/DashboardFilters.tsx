@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { STATUS_OPTIONS } from "@/lib/constants/service-status";
 
 type Option = { id: string; name: string };
 
@@ -19,12 +20,6 @@ type DashboardFiltersProps = {
 };
 
 const ALL = "TODOS";
-
-const STATUS_OPTIONS = [
-  { id: "PARADO", name: "🔴 Parado" },
-  { id: "A_FAZER", name: "🟢 A Fazer" },
-  { id: "FINALIZADO", name: "⚪ Finalizado" },
-];
 
 const PERIOD_OPTIONS = [
   { id: "7", name: "Últimos 7 dias" },

@@ -14,12 +14,10 @@ import UrgentToggle from "@/components/flow/UrgentToggle";
 import AttachServiceFiles from "@/components/flow/AttachServiceFiles";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceRequestDetail } from "@/lib/queries/service-requests";
-
-const STATUS_LABEL: Record<string, string> = {
-  PARADO: "🔴 Parado",
-  A_FAZER: "🟢 A Fazer",
-  FINALIZADO: "⚪ Finalizado",
-};
+import {
+  STATUS_LABEL,
+  type ServiceStatus,
+} from "@/lib/constants/service-status";
 
 const ACTION_LABEL: Record<string, string> = {
   CRIADO: "Serviço criado",
@@ -259,6 +257,22 @@ export default async function ServiceDetailPage({
           </Card>
         )}
 
+      {serviceRequest.status === "PENDENTE_DOCUMENTO" &&
+        (serviceRequest as any).stopped_reason && (
+          <Card className="border-blue-300">
+            <CardHeader>
+              <CardTitle className="text-blue-700">
+                Documento pendente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="whitespace-pre-wrap text-sm">
+                {(serviceRequest as any).stopped_reason}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
       <Card>
         <CardHeader>
           <CardTitle>Ações</CardTitle>
@@ -266,9 +280,7 @@ export default async function ServiceDetailPage({
         <CardContent className="space-y-4">
           <StatusActions
             serviceRequestId={serviceRequest.id}
-            status={
-              serviceRequest.status as "PARADO" | "A_FAZER" | "FINALIZADO"
-            }
+            status={serviceRequest.status as ServiceStatus}
             plate={serviceRequest.plate}
           />
           {canToggleUrgent && (

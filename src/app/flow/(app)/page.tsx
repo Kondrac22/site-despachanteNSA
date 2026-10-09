@@ -9,12 +9,7 @@ import {
   getCurrentStock,
   type DashboardFilters as Filters,
 } from "@/lib/queries/dashboard";
-
-const STATUS_LABEL: Record<string, string> = {
-  PARADO: "🔴 Parado",
-  A_FAZER: "🟢 A Fazer",
-  FINALIZADO: "⚪ Finalizado",
-};
+import { REASON_TEXT_CLASS, STATUS_LABEL } from "@/lib/constants/service-status";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -66,6 +61,11 @@ export default async function DashboardPage({
     { label: "Parados", value: indicators.parado, accent: "text-red-600" },
     { label: "A Fazer", value: indicators.aFazer, accent: "text-green-600" },
     {
+      label: "Pendência de documento",
+      value: indicators.pendenteDocumento,
+      accent: "text-blue-600",
+    },
+    {
       label: "Veículos em Estoque",
       value: indicators.vehiclesInStock,
       accent: "text-primary",
@@ -89,7 +89,7 @@ export default async function DashboardPage({
         requesters={filterOptions.requesters}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {cards.map((card) => {
           const content = (
             <>
@@ -178,10 +178,10 @@ export default async function DashboardPage({
                           {STATUS_LABEL[request.status] ?? request.status}
                         </td>
                         <td className="py-2 pr-2 max-w-[220px]">
-                          {request.status === "PARADO" &&
+                          {REASON_TEXT_CLASS[request.status] &&
                           request.stopped_reason ? (
                             <span
-                              className="line-clamp-2 text-red-700"
+                              className={`line-clamp-2 ${REASON_TEXT_CLASS[request.status]}`}
                               title={request.stopped_reason}
                             >
                               {request.stopped_reason}
