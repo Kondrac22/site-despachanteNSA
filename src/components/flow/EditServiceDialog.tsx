@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -24,6 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { updateServiceRequest } from "@/lib/actions/update-service-request";
+import PlateInput from "@/components/flow/PlateInput";
 
 type ServiceType = { id: string; name: string };
 
@@ -88,14 +88,7 @@ export default function EditServiceDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="edit-plate">Placa *</Label>
-            <Input
-              id="edit-plate"
-              name="plate"
-              required
-              defaultValue={plate}
-              maxLength={8}
-              className="uppercase"
-            />
+            <PlateInput id="edit-plate" name="plate" defaultValue={plate} />
           </div>
 
           <div className="space-y-2">

@@ -41,12 +41,17 @@ export async function sendEmail({
     });
 
     if (!response.ok) {
-      console.error(
-        "sendEmail error:",
-        response.status,
-        await response.text()
-      );
-      return { success: false, error: "O serviço de e-mail recusou o envio." };
+      const body = await response.text();
+      console.error("sendEmail error:", response.status, body);
+      // O Resend devolve { message: "..." } explicando a recusa.
+      let reason = body;
+      try {
+        reason = JSON.parse(body).message ?? body;
+      } catch {}
+      return {
+        success: false,
+        error: `O serviço de e-mail recusou o envio. (${reason})`,
+      };
     }
     return { success: true };
   } catch (err) {

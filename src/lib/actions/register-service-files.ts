@@ -116,7 +116,7 @@ export async function registerServiceFiles(
       console.error("registerServiceFiles error:", error.message);
       return {
         success: false,
-        error: `Não foi possível registrar ${file.originalName}.`,
+        error: `Não foi possível registrar ${file.originalName}. (${error.message})`,
       };
     }
 

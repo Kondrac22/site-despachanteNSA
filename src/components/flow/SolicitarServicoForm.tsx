@@ -32,6 +32,7 @@ import {
 import { createServiceRequest } from "@/lib/actions/create-service-request";
 import { uploadServiceFiles, validateFiles } from "@/lib/upload-service-files";
 import DocumentTile from "@/components/flow/DocumentTile";
+import PlateInput from "@/components/flow/PlateInput";
 import { splitChecklist } from "@/lib/constants/documents";
 
 // Chave dos arquivos que não são de nenhum item do checklist.
@@ -184,14 +185,7 @@ export default function SolicitarServicoForm({
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-2">
               <Label htmlFor="plate">Placa *</Label>
-              <Input
-                id="plate"
-                name="plate"
-                required
-                placeholder="ABC1D23"
-                maxLength={8}
-                className="w-28 font-mono uppercase"
-              />
+              <PlateInput id="plate" name="plate" className="w-28" />
             </div>
 
             <label
