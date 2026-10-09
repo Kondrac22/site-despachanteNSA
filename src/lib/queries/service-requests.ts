@@ -10,13 +10,6 @@ export type ServiceListFilters = {
   urgent?: string;
 };
 
-export type ServiceListSort =
-  | "recent"
-  | "oldest"
-  | "plate_asc"
-  | "plate_desc"
-  | "status";
-
 function periodStartDate(period?: string): string | null {
   if (!period) return null;
   const days = Number(period);
@@ -28,7 +21,6 @@ function periodStartDate(period?: string): string | null {
 
 export async function getServiceRequestsList(
   filters: ServiceListFilters,
-  sort: ServiceListSort,
   page: number,
   pageSize = 20
 ) {
@@ -59,26 +51,11 @@ export async function getServiceRequestsList(
   const startDate = periodStartDate(filters.period);
   if (startDate) query = query.gte("requested_at", startDate);
 
-  // Urgentes em aberto sempre primeiro, em qualquer ordenação escolhida.
-  query = query.order("is_urgent_open", { ascending: false });
-
-  switch (sort) {
-    case "oldest":
-      query = query.order("requested_at", { ascending: true });
-      break;
-    case "plate_asc":
-      query = query.order("plate", { ascending: true });
-      break;
-    case "plate_desc":
-      query = query.order("plate", { ascending: false });
-      break;
-    case "status":
-      query = query.order("status", { ascending: true });
-      break;
-    case "recent":
-    default:
-      query = query.order("requested_at", { ascending: false });
-  }
+  // Urgentes em aberto sempre primeiro; dentro de cada grupo, o mais
+  // antigo vem antes (é o que está esperando há mais tempo).
+  query = query
+    .order("is_urgent_open", { ascending: false })
+    .order("requested_at", { ascending: true });
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;

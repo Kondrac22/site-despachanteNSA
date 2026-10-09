@@ -3,10 +3,7 @@ import { Button } from "@/components/ui/button";
 import ServiceListFilters from "@/components/flow/ServiceListFilters";
 import UrgentBadge from "@/components/flow/UrgentBadge";
 import { getFilterOptions } from "@/lib/queries/dashboard";
-import {
-  getServiceRequestsList,
-  type ServiceListSort,
-} from "@/lib/queries/service-requests";
+import { getServiceRequestsList } from "@/lib/queries/service-requests";
 import { REASON_TEXT_CLASS, STATUS_LABEL } from "@/lib/constants/service-status";
 
 function formatDate(value: string | null) {
@@ -27,13 +24,11 @@ export default async function ServicosPage({
     serviceType?: string;
     period?: string;
     urgent?: string;
-    sort?: string;
     page?: string;
   }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
-  const sort = (params.sort as ServiceListSort) || "recent";
 
   const [filterOptions, { rows, total }] = await Promise.all([
     getFilterOptions(),
@@ -47,7 +42,6 @@ export default async function ServicosPage({
         period: params.period,
         urgent: params.urgent,
       },
-      sort,
       page,
       PAGE_SIZE
     ),
@@ -64,7 +58,6 @@ export default async function ServicosPage({
     if (params.serviceType) query.set("serviceType", params.serviceType);
     if (params.period) query.set("period", params.period);
     if (params.urgent) query.set("urgent", params.urgent);
-    if (params.sort) query.set("sort", params.sort);
     query.set("page", String(targetPage));
     return `/flow/servicos?${query.toString()}`;
   }

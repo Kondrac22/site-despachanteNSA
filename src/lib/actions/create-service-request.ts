@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isValidPlate, normalizePlate } from "@/lib/validation/plate";
 import type { ServiceStatus } from "@/lib/constants/service-status";
+import { isOptionalDocument } from "@/lib/constants/documents";
 
 // Os documentos não passam por aqui: depois de criar o serviço, o
 // navegador envia os arquivos direto pro Storage (a server action tem
@@ -75,8 +76,10 @@ export async function createServiceRequest(
   // pendência de documento e o que falta fica registrado no motivo.
   const checklist: string[] = serviceType.document_checklist ?? [];
   const confirmedItems = formData.getAll("checklist").map(String);
+  // Documentos opcionais (contrato social, procuração, CNH/RG) não
+  // geram pendência quando não são enviados.
   const missingItems = checklist.filter(
-    (item) => !confirmedItems.includes(item)
+    (item) => !isOptionalDocument(item) && !confirmedItems.includes(item)
   );
   const status: ServiceStatus =
     missingItems.length > 0 ? "PENDENTE_DOCUMENTO" : "A_FAZER";

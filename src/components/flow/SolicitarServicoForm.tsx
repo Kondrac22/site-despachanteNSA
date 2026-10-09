@@ -3,8 +3,8 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { X } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,8 +31,8 @@ import {
 } from "@/components/ui/dialog";
 import { createServiceRequest } from "@/lib/actions/create-service-request";
 import { uploadServiceFiles, validateFiles } from "@/lib/upload-service-files";
-import { ACCEPT_ATTRIBUTE, formatBytes } from "@/lib/constants/files";
-import { cn } from "@/lib/utils";
+import DocumentTile from "@/components/flow/DocumentTile";
+import { splitChecklist } from "@/lib/constants/documents";
 
 // Chave dos arquivos que não são de nenhum item do checklist.
 const OTHER_FILES = "__outros__";
@@ -54,7 +54,6 @@ export default function SolicitarServicoForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [serviceTypeId, setServiceTypeId] = useState("");
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   // Arquivos escolhidos em cada linha (item do checklist ou OTHER_FILES).
   const [filesByItem, setFilesByItem] = useState<Record<string, File[]>>({});
   const [showMissingDialog, setShowMissingDialog] = useState(false);
@@ -62,16 +61,14 @@ export default function SolicitarServicoForm({
 
   const checklist =
     serviceTypes.find((t) => t.id === serviceTypeId)?.document_checklist ?? [];
-  // Documento com arquivo anexado conta como entregue; a caixinha serve
-  // para o que a pessoa tem só em papel.
+  // Todo documento precisa de anexo. Os opcionais (contrato social,
+  // procuração, CNH/RG) não geram pendência se ficarem sem arquivo.
+  const { required, optional } = splitChecklist(checklist);
   const hasFile = (item: string) => (filesByItem[item]?.length ?? 0) > 0;
-  const isItemChecked = (item: string) =>
-    checkedItems.has(item) || hasFile(item);
-  const missingItems = checklist.filter((item) => !isItemChecked(item));
+  const missingItems = required.filter((item) => !hasFile(item));
 
   function handleServiceTypeChange(value: string) {
     setServiceTypeId(value);
-    setCheckedItems(new Set());
     // Mantém só os "Outros documentos": os itens mudam com o tipo.
     setFilesByItem((prev): Record<string, File[]> =>
       prev[OTHER_FILES] ? { [OTHER_FILES]: prev[OTHER_FILES] } : {}
@@ -87,9 +84,12 @@ export default function SolicitarServicoForm({
       return;
     }
     setError(null);
+    // Cada documento do checklist tem um arquivo só (escolher de novo
+    // troca); "Outros" acumula quantos forem.
     setFilesByItem((prev) => ({
       ...prev,
-      [item]: [...(prev[item] ?? []), ...picked],
+      [item]:
+        item === OTHER_FILES ? [...(prev[item] ?? []), ...picked] : [picked[0]],
     }));
   }
 
@@ -98,15 +98,6 @@ export default function SolicitarServicoForm({
       ...prev,
       [item]: (prev[item] ?? []).filter((_, i) => i !== index),
     }));
-  }
-
-  function toggleItem(item: string, checked: boolean) {
-    setCheckedItems((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(item);
-      else next.delete(item);
-      return next;
-    });
   }
 
   // Documento faltando não bloqueia: pede confirmação num popup e o
@@ -168,94 +159,17 @@ export default function SolicitarServicoForm({
     router.push("/flow?created=1");
   }
 
-  // Uma linha por documento: caixinha (do checklist), botão de anexar e
-  // os arquivos já escolhidos, que dá para remover antes de enviar.
-  function renderDocumentRow(item: string, id: string, isChecklist: boolean) {
-    const rowFiles = filesByItem[item] ?? [];
-    const checked = isChecklist && isItemChecked(item);
+  function renderChecklistTile(item: string, isOptional: boolean) {
     return (
-      <div
+      <DocumentTile
         key={item}
-        className={cn(
-          "space-y-2 rounded-md border p-3",
-          checked && "border-green-300 bg-green-50/50"
-        )}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {isChecklist ? (
-            <label
-              htmlFor={`${id}-check`}
-              className="flex items-center gap-2 text-sm font-medium"
-            >
-              <input
-                id={`${id}-check`}
-                type="checkbox"
-                name="checklist"
-                value={item}
-                checked={checked}
-                // Com arquivo anexado o item fica marcado; para desmarcar,
-                // remova o arquivo.
-                onChange={(e) => {
-                  if (hasFile(item)) return;
-                  toggleItem(item, e.target.checked);
-                }}
-                className="h-4 w-4 accent-primary"
-              />
-              {item}
-            </label>
-          ) : (
-            <span className="text-sm font-medium">Outros documentos</span>
-          )}
-
-          <label
-            htmlFor={`${id}-file`}
-            className={cn(
-              buttonVariants({ variant: "outline", size: "sm" }),
-              "cursor-pointer"
-            )}
-          >
-            📎 {rowFiles.length > 0 ? "Anexar mais" : "Anexar"}
-          </label>
-          <input
-            id={`${id}-file`}
-            type="file"
-            multiple
-            accept={ACCEPT_ATTRIBUTE}
-            className="sr-only"
-            onChange={(e) => {
-              addFiles(item, e.target.files);
-              // Permite escolher o mesmo arquivo de novo depois de remover.
-              e.target.value = "";
-            }}
-          />
-        </div>
-
-        {rowFiles.length > 0 && (
-          <ul className="space-y-1">
-            {rowFiles.map((file, fileIndex) => (
-              <li
-                key={`${file.name}-${fileIndex}`}
-                className="flex items-center justify-between gap-2 rounded bg-muted/60 px-2 py-1 text-xs"
-              >
-                <span className="truncate">
-                  {file.name}{" "}
-                  <span className="text-muted-foreground">
-                    ({formatBytes(file.size)})
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeFile(item, fileIndex)}
-                  className="text-muted-foreground hover:text-destructive"
-                  aria-label={`Remover ${file.name}`}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+        id={`doc-${checklist.indexOf(item)}`}
+        label={item}
+        optional={isOptional}
+        file={filesByItem[item]?.[0] ?? null}
+        onSelect={(list) => addFiles(item, list)}
+        onRemove={() => removeFile(item, 0)}
+      />
     );
   }
 
@@ -266,16 +180,45 @@ export default function SolicitarServicoForm({
       </CardHeader>
       <CardContent>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="plate">Placa *</Label>
-            <Input
-              id="plate"
-              name="plate"
-              required
-              placeholder="ABC1234 ou ABC1D23"
-              maxLength={8}
-              className="uppercase"
-            />
+          {/* Placa, urgência e data numa linha só (quebra no celular). */}
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="plate">Placa *</Label>
+              <Input
+                id="plate"
+                name="plate"
+                required
+                placeholder="ABC1D23"
+                maxLength={8}
+                className="w-28 font-mono uppercase"
+              />
+            </div>
+
+            <label
+              htmlFor="isUrgent"
+              className="flex h-9 items-center gap-2 whitespace-nowrap rounded-md border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700"
+            >
+              <input
+                id="isUrgent"
+                type="checkbox"
+                name="isUrgent"
+                value="1"
+                className="h-4 w-4 accent-red-600"
+              />
+              🚨 Urgente
+            </label>
+
+            <div className="space-y-2">
+              <Label htmlFor="requestedAt">Data</Label>
+              <Input
+                id="requestedAt"
+                name="requestedAt"
+                type="date"
+                defaultValue={todayIso}
+                disabled={!isAdmin}
+                className="w-auto"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -300,51 +243,57 @@ export default function SolicitarServicoForm({
           </div>
 
           {serviceTypeId && (
-            <fieldset className="space-y-2 rounded-md border p-4">
-              <legend className="px-1 text-sm font-medium">Documentos</legend>
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-medium">Documentos</legend>
               <p className="text-xs text-muted-foreground">
-                Anexe o arquivo de cada documento ou marque a caixinha se você
-                tem o documento em papel. Se faltar algum, o serviço será
-                criado com pendência de documento. PDF, JPG, PNG, DOC ou DOCX —
-                até 10 MB por arquivo.
+                Clique no quadrado para anexar cada documento (PDF, JPG, PNG,
+                DOC ou DOCX — até 10 MB). Se faltar algum, o serviço será
+                criado com pendência de documento.
               </p>
-              {checklist.map((item, index) =>
-                renderDocumentRow(item, `doc-${index}`, true)
-              )}
-              {renderDocumentRow(OTHER_FILES, "doc-outros", false)}
+
+              {/* O servidor recebe a lista de documentos entregues (com
+                  arquivo ou marcados como "em papel"). */}
+              {checklist
+                .filter((item) => hasFile(item))
+                .map((item) => (
+                  <input key={item} type="hidden" name="checklist" value={item} />
+                ))}
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {/* Obrigatórios (ATPV, Laudo, NF...), depois Outros e, em
+                    seguida, os opcionais. */}
+                {required.map((item) => renderChecklistTile(item, false))}
+                {(filesByItem[OTHER_FILES] ?? []).map((file, index) => (
+                  <DocumentTile
+                    key={`outros-${index}-${file.name}`}
+                    id={`doc-outros-${index}`}
+                    label="Outros"
+                    file={file}
+                    onSelect={() => {}}
+                    onRemove={() => removeFile(OTHER_FILES, index)}
+                  />
+                ))}
+                <DocumentTile
+                  id="doc-outros-novo"
+                  label="Outros"
+                  file={null}
+                  multiple
+                  onSelect={(list) => addFiles(OTHER_FILES, list)}
+                  onRemove={() => {}}
+                />
+                {optional.map((item) => renderChecklistTile(item, true))}
+                <div className="relative aspect-square overflow-hidden rounded-md border bg-muted/30">
+                  <Image
+                    src="/logo.png"
+                    alt="Logo"
+                    fill
+                    sizes="160px"
+                    className="object-contain p-4"
+                  />
+                </div>
+              </div>
             </fieldset>
           )}
-
-          <div className="space-y-2">
-            <Label htmlFor="requestedAt">Data</Label>
-            <Input
-              id="requestedAt"
-              name="requestedAt"
-              type="date"
-              defaultValue={todayIso}
-              disabled={!isAdmin}
-            />
-            {!isAdmin && (
-              <p className="text-xs text-muted-foreground">
-                A data é preenchida automaticamente. Somente administradores
-                podem alterá-la.
-              </p>
-            )}
-          </div>
-
-          <label
-            htmlFor="isUrgent"
-            className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
-          >
-            <input
-              id="isUrgent"
-              type="checkbox"
-              name="isUrgent"
-              value="1"
-              className="h-4 w-4 accent-red-600"
-            />
-            🚨 Marcar como urgente
-          </label>
 
           <div className="space-y-2">
             <Label htmlFor="notes">Observações</Label>

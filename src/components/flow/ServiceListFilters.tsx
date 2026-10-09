@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -30,14 +31,6 @@ const PERIOD_OPTIONS = [
 
 const URGENT_OPTIONS = [{ id: "1", name: "🚨 Só urgentes" }];
 
-const SORT_OPTIONS = [
-  { id: "recent", name: "Mais recente" },
-  { id: "oldest", name: "Mais antigo" },
-  { id: "plate_asc", name: "Placa A-Z" },
-  { id: "plate_desc", name: "Placa Z-A" },
-  { id: "status", name: "Status" },
-];
-
 export default function ServiceListFilters({
   units,
   serviceTypes,
@@ -62,33 +55,37 @@ export default function ServiceListFilters({
 
   function FilterSelect({
     paramKey,
-    placeholder,
+    label,
     options,
-    includeAll = true,
   }: {
     paramKey: string;
-    placeholder: string;
+    label: string;
     options: Option[];
-    includeAll?: boolean;
   }) {
     const currentValue = searchParams.get(paramKey) ?? ALL;
+    const id = `service-filter-${paramKey}`;
     return (
-      <Select
-        value={currentValue}
-        onValueChange={(v) => updateParam(paramKey, v)}
-      >
-        <SelectTrigger className="w-full sm:w-[180px]">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {includeAll && <SelectItem value={ALL}>Todos</SelectItem>}
-          {options.map((o) => (
-            <SelectItem key={o.id} value={o.id}>
-              {o.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="w-full space-y-1.5 sm:w-[180px]">
+        <Label htmlFor={id} className="text-xs text-muted-foreground">
+          {label}
+        </Label>
+        <Select
+          value={currentValue}
+          onValueChange={(v) => updateParam(paramKey, v)}
+        >
+          <SelectTrigger id={id} className="w-full">
+            <SelectValue placeholder={label} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Todos</SelectItem>
+            {options.map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                {o.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     );
   }
 
@@ -115,35 +112,29 @@ export default function ServiceListFilters({
       <div className="flex flex-wrap gap-3">
         <FilterSelect
           paramKey="requester"
-          placeholder="Solicitante"
+          label="Solicitante"
           options={requesters}
         />
-        <FilterSelect paramKey="unit" placeholder="Unidade" options={units} />
+        <FilterSelect paramKey="unit" label="Unidade" options={units} />
         <FilterSelect
           paramKey="status"
-          placeholder="Status"
+          label="Status"
           options={STATUS_OPTIONS}
         />
         <FilterSelect
           paramKey="period"
-          placeholder="Período"
+          label="Período"
           options={PERIOD_OPTIONS}
         />
         <FilterSelect
           paramKey="serviceType"
-          placeholder="Tipo de Serviço"
+          label="Tipo de Serviço"
           options={serviceTypes}
         />
         <FilterSelect
           paramKey="urgent"
-          placeholder="Urgência"
+          label="Urgência"
           options={URGENT_OPTIONS}
-        />
-        <FilterSelect
-          paramKey="sort"
-          placeholder="Ordenar por"
-          options={SORT_OPTIONS}
-          includeAll={false}
         />
       </div>
     </div>
