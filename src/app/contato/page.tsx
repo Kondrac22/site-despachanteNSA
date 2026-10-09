@@ -43,7 +43,7 @@ export default function ContatoPage() {
 
       toast.success("Mensagem enviada com sucesso! Retornaremos em breve.");
       setFormData({ nome: "", email: "", telefone: "", mensagem: "" });
-    } catch (error) {
+    } catch {
       toast.error("Erro ao enviar mensagem. Tente novamente.");
     } finally {
       setIsSubmitting(false);

@@ -6,9 +6,9 @@ import {
   getFilterOptions,
   getDashboardIndicators,
   getRecentServiceRequests,
-  getCurrentStock,
   type DashboardFilters as Filters,
 } from "@/lib/queries/dashboard";
+import { getCurrentStockList } from "@/lib/queries/vehicles";
 import { REASON_TEXT_CLASS, STATUS_LABEL } from "@/lib/constants/service-status";
 
 function formatDate(value: string | null) {
@@ -58,7 +58,7 @@ export default async function DashboardPage({
       getFilterOptions(),
       getDashboardIndicators(filters),
       getRecentServiceRequests(filters),
-      getCurrentStock(5),
+      getCurrentStockList(undefined, undefined, 5),
     ]);
 
   const cards: {
@@ -252,20 +252,13 @@ export default async function DashboardPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {currentStock.map((movement: any) => (
-                    <tr
-                      key={movement.vehicle_id}
-                      className="border-b last:border-0"
-                    >
-                      <td className="py-2 pr-2 font-medium">
-                        {movement.vehicles?.plate ?? "—"}
-                      </td>
+                  {currentStock.map((row) => (
+                    <tr key={row.vehicle_id} className="border-b last:border-0">
+                      <td className="py-2 pr-2 font-medium">{row.plate}</td>
                       <td className="py-2 pr-2">
-                        {formatDate(movement.created_at)}
+                        {formatDate(row.entry_at)}
                       </td>
-                      <td className="py-2">
-                        {movement.profiles?.name ?? "—"}
-                      </td>
+                      <td className="py-2">{row.responsible_name ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>

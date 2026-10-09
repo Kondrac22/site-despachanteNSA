@@ -44,7 +44,7 @@ export default function ServiceRequestForm() {
         "Solicitação enviada com sucesso! Entraremos em contato em breve.",
       );
       setFormData({ placa: "", renavam: "", contato: "", descricao: "" });
-    } catch (error) {
+    } catch {
       toast.error("Erro ao enviar solicitação. Tente novamente.");
     } finally {
       setIsSubmitting(false);

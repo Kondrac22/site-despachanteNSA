@@ -16,59 +16,34 @@ export type CurrentStockRow = {
 // entrada nele (o veículo em si não pertence a nenhuma unidade).
 export async function getCurrentStockList(
   plateFilter?: string,
-  unitFilter?: string
+  unitFilter?: string,
+  limit?: number
 ): Promise<CurrentStockRow[]> {
   const supabase = await createClient();
 
-  const { data: movements, error } = await supabase
-    .from("vehicle_movements")
-    .select(
-      `vehicle_id, movement_type, created_at, service_request_id,
-       vehicles ( plate ),
-       profiles!vehicle_movements_user_id_fkey ( name ),
-       service_requests ( protocol, units ( id, name ), service_types ( name ) )`
-    )
-    .order("created_at", { ascending: false });
+  // A view current_vehicle_stock (supabase/estoque-atual.sql) já calcula
+  // no banco o último movimento de cada veículo e devolve só os em estoque.
+  let query = supabase
+    .from("current_vehicle_stock")
+    .select("*")
+    .order("entry_at", { ascending: false });
 
+  if (plateFilter) {
+    query = query.ilike("plate", `%${plateFilter.trim().toUpperCase()}%`);
+  }
+  if (unitFilter) query = query.eq("unit_id", unitFilter);
+  if (limit) query = query.limit(limit);
+
+  const { data, error } = await query;
   if (error) {
     console.error("getCurrentStockList error:", error.message);
     return [];
   }
 
-  // Fica só com o movimento mais recente de cada veículo.
-  const lastByVehicle = new Map<string, any>();
-  for (const m of movements ?? []) {
-    if (!lastByVehicle.has(m.vehicle_id)) lastByVehicle.set(m.vehicle_id, m);
-  }
-
-  let rows: CurrentStockRow[] = [...lastByVehicle.values()]
-    .filter((m) => m.movement_type === "ENTRY")
-    .map((m) => ({
-      vehicle_id: m.vehicle_id,
-      plate: m.vehicles?.plate ?? "—",
-      entry_at: m.created_at,
-      service_request_id: m.service_request_id,
-      protocol: m.service_requests?.protocol ?? null,
-      unit_id: m.service_requests?.units?.id ?? null,
-      unit_name: m.service_requests?.units?.name ?? null,
-      service_type_name: m.service_requests?.service_types?.name ?? null,
-      responsible_name: m.profiles?.name ?? null,
-    }));
-
-  if (plateFilter) {
-    const normalized = plateFilter.trim().toUpperCase();
-    rows = rows.filter((r) => r.plate.includes(normalized));
-  }
-
-  if (unitFilter) {
-    rows = rows.filter((r) => r.unit_id === unitFilter);
-  }
-
-  rows.sort(
-    (a, b) => new Date(b.entry_at).getTime() - new Date(a.entry_at).getTime()
-  );
-
-  return rows;
+  return (data ?? []).map((row) => ({
+    ...row,
+    plate: row.plate ?? "—",
+  })) as CurrentStockRow[];
 }
 
 export type VehicleMovementEntry = {

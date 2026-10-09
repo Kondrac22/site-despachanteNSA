@@ -81,27 +81,22 @@ export async function getDashboardIndicators(filters: DashboardFilters) {
     return count ?? 0;
   }
 
-  const [parado, aFazer, pendenteDocumento, urgentes] = await Promise.all([
-    countByStatus("PARADO"),
-    countByStatus("A_FAZER"),
-    countByStatus("PENDENTE_DOCUMENTO"),
-    countUrgentOpen(),
-  ]);
-
-  const { data: movements } = await supabase
-    .from("vehicle_movements")
-    .select("vehicle_id, movement_type, created_at")
-    .order("created_at", { ascending: false });
-
-  const lastMovementByVehicle = new Map<string, string>();
-  for (const m of movements ?? []) {
-    if (!lastMovementByVehicle.has(m.vehicle_id)) {
-      lastMovementByVehicle.set(m.vehicle_id, m.movement_type);
-    }
+  // A view current_vehicle_stock já devolve só os veículos em estoque.
+  async function countVehiclesInStock() {
+    const { count } = await supabase
+      .from("current_vehicle_stock")
+      .select("vehicle_id", { count: "exact", head: true });
+    return count ?? 0;
   }
-  const vehiclesInStock = [...lastMovementByVehicle.values()].filter(
-    (type) => type === "ENTRY"
-  ).length;
+
+  const [parado, aFazer, pendenteDocumento, urgentes, vehiclesInStock] =
+    await Promise.all([
+      countByStatus("PARADO"),
+      countByStatus("A_FAZER"),
+      countByStatus("PENDENTE_DOCUMENTO"),
+      countUrgentOpen(),
+      countVehiclesInStock(),
+    ]);
 
   return {
     parado,
@@ -140,31 +135,4 @@ export async function getRecentServiceRequests(filters: DashboardFilters) {
     return [];
   }
   return data ?? [];
-}
-
-export async function getCurrentStock(limit = 10) {
-  const supabase = await createClient();
-
-  const { data: movements, error } = await supabase
-    .from("vehicle_movements")
-    .select(
-      `vehicle_id, movement_type, created_at,
-       vehicles ( plate ),
-       profiles!vehicle_movements_user_id_fkey ( name )`
-    )
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("getCurrentStock error:", error.message);
-    return [];
-  }
-
-  const lastByVehicle = new Map<string, (typeof movements)[number]>();
-  for (const m of movements ?? []) {
-    if (!lastByVehicle.has(m.vehicle_id)) lastByVehicle.set(m.vehicle_id, m);
-  }
-
-  return [...lastByVehicle.values()]
-    .filter((m) => m.movement_type === "ENTRY")
-    .slice(0, limit);
 }

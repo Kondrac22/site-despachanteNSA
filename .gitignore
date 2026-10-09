@@ -43,3 +43,6 @@ next-env.d.ts
 # local env files
 .env*.local
 .env.local
+
+# Arquivos que o Windows cria ao baixar arquivos
+*:Zone.Identifier

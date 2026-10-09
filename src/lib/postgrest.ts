@@ -8,7 +8,8 @@ export function createPostgrestClient() {
   const client = new PostgrestClient(POSTGREST_URL, {
     schema: POSTGREST_SCHEMA,
     fetch: (...args) => {
-      let [url, options] = args;
+      let [url] = args;
+      const [, options] = args;
 
       if (url instanceof URL || typeof url === "string") {
         const urlObj = url instanceof URL ? url : new URL(url);
