@@ -59,6 +59,9 @@ export async function getServiceRequestsList(
   const startDate = periodStartDate(filters.period);
   if (startDate) query = query.gte("requested_at", startDate);
 
+  // Urgentes em aberto sempre primeiro, em qualquer ordenação escolhida.
+  query = query.order("is_urgent_open", { ascending: false });
+
   switch (sort) {
     case "oldest":
       query = query.order("requested_at", { ascending: true });
