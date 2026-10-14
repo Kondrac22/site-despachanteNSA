@@ -33,21 +33,13 @@ export default async function FinanceiroPage({
 }: {
   searchParams: Promise<{ month?: string; year?: string; unit?: string }>;
 }) {
+  // Todos os usuários acessam (só visualizar e exportar); quem não é
+  // admin vê apenas as próprias unidades.
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/flow/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "admin") {
-    redirect("/flow");
-  }
 
   const params = await searchParams;
   const {
@@ -118,19 +110,22 @@ export default async function FinanceiroPage({
             ))}
           </SelectContent>
         </Select>
-        <Select name="unit" defaultValue={selectedUnit?.id ?? ALL_UNITS}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Unidade" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_UNITS}>Todas as unidades</SelectItem>
-            {units.map((unit) => (
-              <SelectItem key={unit.id} value={unit.id}>
-                {unit.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Com uma unidade só, não há o que escolher. */}
+        {units.length > 1 && (
+          <Select name="unit" defaultValue={selectedUnit?.id ?? ALL_UNITS}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Unidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_UNITS}>Todas as unidades</SelectItem>
+              {units.map((unit) => (
+                <SelectItem key={unit.id} value={unit.id}>
+                  {unit.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Button type="submit" variant="secondary">
           Filtrar
         </Button>

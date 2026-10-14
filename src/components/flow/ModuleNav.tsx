@@ -26,11 +26,10 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
     { href: "/flow/servicos", label: "Acompanhamento" },
     { href: "/flow/estoque", label: "Estoque de Veículos" },
     { href: "/flow/historico", label: "Histórico" },
+    // Financeiro é só leitura: todos veem (cada um, as suas unidades).
+    { href: "/flow/financeiro", label: "Financeiro" },
     ...(isAdmin
-      ? [
-          { href: "/flow/financeiro", label: "Financeiro" },
-          { href: "/flow/configuracoes", label: "Configurações" },
-        ]
+      ? [{ href: "/flow/configuracoes", label: "Configurações" }]
       : []),
   ];
 

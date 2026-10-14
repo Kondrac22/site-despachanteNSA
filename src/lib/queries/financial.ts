@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getUserScope } from "@/lib/queries/user-scope";
 
 export type FinancialServiceRow = {
   id: string;
@@ -71,25 +72,38 @@ function monthRange(year: number, month: number) {
   };
 }
 
-// Todas as unidades, inclusive inativas: uma unidade desativada ainda pode
-// ter serviços finalizados em meses anteriores.
+// Unidades inclusive inativas: uma unidade desativada ainda pode ter
+// serviços finalizados em meses anteriores. Admin vê todas; os demais,
+// só as suas.
 export async function getFinancialUnits() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("units")
-    .select("id, name")
-    .order("name");
+  const [supabase, scope] = await Promise.all([createClient(), getUserScope()]);
+  if (!scope.isAdmin && scope.unitIds.length === 0) return [];
+  let query = supabase.from("units").select("id, name").order("name");
+  if (!scope.isAdmin) query = query.in("id", scope.unitIds);
+  const { data } = await query;
   return (data ?? []) as { id: string; name: string }[];
 }
 
 // unitId opcional: quando informado, o relatório considera só essa unidade.
+// Usuário comum só vê as próprias unidades (ou uma delas, se filtrar).
 export async function getFinancialReport(
   year: number,
   month: number,
   unitId?: string | null,
 ) {
-  const supabase = await createClient();
+  const [supabase, scope] = await Promise.all([createClient(), getUserScope()]);
   const { start, end } = monthRange(year, month);
+
+  let allowedUnits: string[] | null = null;
+  if (!scope.isAdmin) {
+    if (scope.unitIds.length === 0) {
+      return { rows: [], unitTotals: [], total: 0, missingPriceCount: 0 };
+    }
+    if (!unitId || !scope.unitIds.includes(unitId)) {
+      unitId = null;
+      allowedUnits = scope.unitIds;
+    }
+  }
 
   let query = supabase
     .from("service_requests")
@@ -104,6 +118,7 @@ export async function getFinancialReport(
     .order("finished_at", { ascending: false });
 
   if (unitId) query = query.eq("unit_id", unitId);
+  else if (allowedUnits) query = query.in("unit_id", allowedUnits);
 
   const { data, error } = await query;
 
