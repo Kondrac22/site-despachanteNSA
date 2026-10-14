@@ -38,13 +38,17 @@ export async function createServiceRequest(
   if (!profile || !profile.active) {
     return { success: false, error: "Usuário inativo ou não encontrado." };
   }
-  // Com mais de uma unidade habilitada, o usuário escolhe no formulário;
-  // senão vale a unidade principal (ou a única habilitada).
-  const { data: userUnits } = await supabase
-    .from("profile_units")
-    .select("unit_id")
-    .eq("profile_id", profile.id);
-  const allowedUnitIds = (userUnits ?? []).map((u) => u.unit_id);
+  // Com mais de uma unidade disponível, o usuário escolhe no formulário;
+  // senão vale a unidade principal (ou a única disponível). Admin pode
+  // solicitar para qualquer unidade ativa.
+  const { data: availableUnits } =
+    profile.role === "admin"
+      ? await supabase.from("units").select("id").eq("active", true)
+      : await supabase
+          .from("profile_units")
+          .select("id:unit_id")
+          .eq("profile_id", profile.id);
+  const allowedUnitIds = (availableUnits ?? []).map((u) => u.id as string);
 
   if (allowedUnitIds.length === 0) {
     return {

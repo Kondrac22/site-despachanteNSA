@@ -30,10 +30,24 @@ export default async function SolicitarServicoPage() {
       : Promise.resolve({ data: null }),
   ]);
 
-  const units = (userUnits ?? [])
-    .map((row: any) => row.units as { id: string; name: string } | null)
-    .filter((u): u is { id: string; name: string } => u !== null)
-    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  const isAdmin = profile?.role === "admin";
+
+  // Admin solicita para qualquer unidade ativa; os demais, só para as
+  // unidades habilitadas para eles.
+  let units: { id: string; name: string }[];
+  if (isAdmin) {
+    const { data: allUnits } = await supabase
+      .from("units")
+      .select("id, name")
+      .eq("active", true)
+      .order("name");
+    units = allUnits ?? [];
+  } else {
+    units = (userUnits ?? [])
+      .map((row: any) => row.units as { id: string; name: string } | null)
+      .filter((u): u is { id: string; name: string } => u !== null)
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -44,7 +58,7 @@ export default async function SolicitarServicoPage() {
           ...t,
           document_checklist: t.document_checklist ?? [],
         }))}
-        isAdmin={profile?.role === "admin"}
+        isAdmin={isAdmin}
         todayIso={today}
         units={units}
         defaultUnitId={profile?.unit_id ?? undefined}

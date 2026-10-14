@@ -222,6 +222,10 @@ export default function SolicitarServicoForm({
               />
             </div>
 
+            {/* Com uma unidade só, ela vai direto, sem campo. */}
+            {units.length === 1 && (
+              <input type="hidden" name="unitId" value={units[0].id} />
+            )}
             {units.length > 1 && (
               <div className="space-y-2">
                 <Label htmlFor="unitId">Unidade *</Label>
