@@ -22,6 +22,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   createUserAccount,
   updateUserProfile,
 } from "@/lib/actions/manage-users";
@@ -34,8 +40,7 @@ type UserRow = {
   email: string;
   role: "admin" | "user";
   active: boolean;
-  unit_id: string | null;
-  units: { name: string } | null;
+  unit_ids: string[];
 };
 
 type UsersManagerProps = {
@@ -87,24 +92,31 @@ export default function UsersManager({
     }
   }
 
-  async function handleUnitChange(userId: string, unitId: string) {
-    const previous = users.find((u) => u.id === userId);
-    const unit = units.find((u) => u.id === unitId);
-    applyLocalChange(userId, {
-      unit_id: unitId,
-      units: unit ? { name: unit.name } : null,
-    });
-    const result = await updateUserProfile(userId, { unitId });
+  // Marca/desmarca uma unidade; o usuário precisa ficar com pelo menos uma.
+  async function handleUnitToggle(userId: string, unitId: string) {
+    const previous = users.find((u) => u.id === userId)?.unit_ids ?? [];
+    const unitIds = previous.includes(unitId)
+      ? previous.filter((id) => id !== unitId)
+      : [...previous, unitId];
+    if (unitIds.length === 0) {
+      toast.error("O usuário precisa ter pelo menos uma unidade.");
+      return;
+    }
+    applyLocalChange(userId, { unit_ids: unitIds });
+    const result = await updateUserProfile(userId, { unitIds });
     if (!result.success) {
       toast.error(result.error);
-      if (previous)
-        applyLocalChange(userId, {
-          unit_id: previous.unit_id,
-          units: previous.units,
-        });
+      applyLocalChange(userId, { unit_ids: previous });
     } else {
-      toast.success("Unidade atualizada.");
+      toast.success("Unidades atualizadas.");
     }
+  }
+
+  function unitsLabel(unitIds: string[]) {
+    const names = units
+      .filter((unit) => unitIds.includes(unit.id))
+      .map((unit) => unit.name);
+    return names.length > 0 ? names.join(", ") : "Sem unidade";
   }
 
   async function handleToggleActive(userId: string, current: boolean) {
@@ -125,6 +137,11 @@ export default function UsersManager({
     setCreating(true);
 
     const formData = new FormData(e.currentTarget);
+    if (formData.getAll("unitIds").length === 0) {
+      setCreateError("Selecione pelo menos uma unidade.");
+      setCreating(false);
+      return;
+    }
     const result = await createUserAccount(formData);
 
     setCreating(false);
@@ -187,21 +204,25 @@ export default function UsersManager({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="unitId">Unidade *</Label>
-                <Select name="unitId" required>
-                  <SelectTrigger id="unitId" className="w-full">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((unit) => (
-                      <SelectItem key={unit.id} value={unit.id}>
-                        {unit.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">Unidades *</legend>
+                <div className="grid grid-cols-2 gap-2">
+                  {units.map((unit) => (
+                    <label
+                      key={unit.id}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        name="unitIds"
+                        value={unit.id}
+                        className="h-4 w-4"
+                      />
+                      {unit.name}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
 
               {createError && (
                 <p className="text-sm text-destructive" role="alert">
@@ -226,7 +247,7 @@ export default function UsersManager({
               <th className="p-3">Nome</th>
               <th className="p-3">E-mail</th>
               <th className="p-3">Perfil</th>
-              <th className="p-3">Unidade</th>
+              <th className="p-3">Unidades</th>
               <th className="p-3">Status</th>
               <th className="p-3"></th>
             </tr>
@@ -254,22 +275,43 @@ export default function UsersManager({
                   </Select>
                 </td>
                 <td className="p-3">
-                  <Select
-                    value={u.unit_id ?? ""}
-                    onValueChange={(value) => handleUnitChange(u.id, value)}
-                    disabled={u.id === currentUserId}
-                  >
-                    <SelectTrigger className="w-[160px]">
-                      <SelectValue placeholder="Sem unidade" />
-                    </SelectTrigger>
-                    <SelectContent>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      asChild
+                      disabled={u.id === currentUserId}
+                    >
+                      <Button
+                        variant="outline"
+                        className="w-[200px] justify-between font-normal"
+                      >
+                        <span className="truncate">
+                          {unitsLabel(u.unit_ids)}
+                        </span>
+                        <span aria-hidden>▾</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
                       {units.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.id}>
+                        <DropdownMenuItem
+                          key={unit.id}
+                          // Não fecha o menu: dá pra marcar várias seguidas.
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            handleUnitToggle(u.id, unit.id);
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            readOnly
+                            tabIndex={-1}
+                            checked={u.unit_ids.includes(unit.id)}
+                            className="pointer-events-none h-4 w-4"
+                          />
                           {unit.name}
-                        </SelectItem>
+                        </DropdownMenuItem>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </td>
                 <td className="p-3">
                   {u.active ? (
@@ -299,7 +341,7 @@ export default function UsersManager({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Você não pode alterar perfil, unidade ou status da sua própria conta
+        Você não pode alterar perfil, unidades ou status da sua própria conta
         por aqui — isso evita se trancar fora do sistema por acidente.
       </p>
     </div>

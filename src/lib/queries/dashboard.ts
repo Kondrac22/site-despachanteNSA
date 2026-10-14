@@ -20,22 +20,30 @@ function periodStartDate(period?: string): string | null {
   return date.toISOString();
 }
 
-// Usuário comum só vê os serviços da própria unidade, seja qual for o
-// filtro de unidade escolhido. Sem unidade, usa um id que não existe
-// (não vê nada).
+// Usuário comum só vê os serviços das próprias unidades: pode filtrar
+// por uma delas; qualquer outro filtro de unidade é ignorado. Sem
+// unidade, usa um id que não existe (não vê nada).
 const NO_UNIT_ID = "00000000-0000-0000-0000-000000000000";
+
+type ScopedFilters = DashboardFilters & { units?: string[] };
 
 async function scopeFilters(
   filters: DashboardFilters
-): Promise<DashboardFilters> {
+): Promise<ScopedFilters> {
   const scope = await getUserScope();
   if (scope.isAdmin) return filters;
-  return { ...filters, unit: scope.unitId ?? NO_UNIT_ID };
+  if (filters.unit && scope.unitIds.includes(filters.unit)) return filters;
+  return {
+    ...filters,
+    unit: undefined,
+    units: scope.unitIds.length > 0 ? scope.unitIds : [NO_UNIT_ID],
+  };
 }
 
-function applyBaseFilters(query: any, filters: DashboardFilters) {
+function applyBaseFilters(query: any, filters: ScopedFilters) {
   if (filters.requester) query = query.eq("created_by", filters.requester);
   if (filters.unit) query = query.eq("unit_id", filters.unit);
+  else if (filters.units) query = query.in("unit_id", filters.units);
   if (filters.serviceType)
     query = query.eq("service_type_id", filters.serviceType);
   if (filters.urgent === "1")
@@ -99,14 +107,14 @@ export async function getDashboardIndicators(
   }
 
   // A view current_vehicle_stock já devolve só os veículos em estoque.
-  // Usuário comum conta só o estoque da própria unidade.
+  // Usuário comum conta só o estoque das próprias unidades.
   async function countVehiclesInStock() {
     const scope = await getUserScope();
-    if (!scope.isAdmin && !scope.unitId) return 0;
+    if (!scope.isAdmin && scope.unitIds.length === 0) return 0;
     let query = supabase
       .from("current_vehicle_stock")
       .select("vehicle_id", { count: "exact", head: true });
-    if (!scope.isAdmin) query = query.eq("unit_id", scope.unitId);
+    if (!scope.isAdmin) query = query.in("unit_id", scope.unitIds);
     const { count } = await query;
     return count ?? 0;
   }

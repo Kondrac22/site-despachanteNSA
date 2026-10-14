@@ -38,13 +38,31 @@ export async function createServiceRequest(
   if (!profile || !profile.active) {
     return { success: false, error: "Usuário inativo ou não encontrado." };
   }
-  if (!profile.unit_id) {
+  // Com mais de uma unidade habilitada, o usuário escolhe no formulário;
+  // senão vale a unidade principal (ou a única habilitada).
+  const { data: userUnits } = await supabase
+    .from("profile_units")
+    .select("unit_id")
+    .eq("profile_id", profile.id);
+  const allowedUnitIds = (userUnits ?? []).map((u) => u.unit_id);
+
+  if (allowedUnitIds.length === 0) {
     return {
       success: false,
       error:
         "Seu usuário não está vinculado a nenhuma unidade. Fale com o administrador.",
     };
   }
+
+  const chosenUnitId = String(formData.get("unitId") ?? "");
+  if (chosenUnitId && !allowedUnitIds.includes(chosenUnitId)) {
+    return { success: false, error: "Unidade inválida." };
+  }
+  const unitId =
+    chosenUnitId ||
+    (profile.unit_id && allowedUnitIds.includes(profile.unit_id)
+      ? profile.unit_id
+      : allowedUnitIds[0]);
 
   const rawPlate = String(formData.get("plate") ?? "");
   const plate = normalizePlate(rawPlate);
@@ -90,7 +108,7 @@ export async function createServiceRequest(
   const { data: unit } = await supabase
     .from("units")
     .select("code")
-    .eq("id", profile.unit_id)
+    .eq("id", unitId)
     .single();
 
   if (!unit?.code) {
@@ -103,7 +121,7 @@ export async function createServiceRequest(
 
   const { data: nextNumber, error: protocolError } = await supabase.rpc(
     "increment_unit_protocol",
-    { p_unit_id: profile.unit_id }
+    { p_unit_id: unitId }
   );
 
   if (protocolError || nextNumber == null) {
@@ -134,7 +152,7 @@ export async function createServiceRequest(
       service_type_id: serviceTypeId,
       requested_at: requestedAt,
       created_by: profile.id,
-      unit_id: profile.unit_id,
+      unit_id: unitId,
       status,
       stopped_reason: missingReason,
       notes: notes || null,

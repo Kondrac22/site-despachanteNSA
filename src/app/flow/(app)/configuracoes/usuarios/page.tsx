@@ -25,7 +25,7 @@ export default async function UsuariosPage() {
   const [{ data: users }, { data: units }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, name, email, role, active, unit_id, units ( name )")
+      .select("id, name, email, role, active, profile_units ( unit_id )")
       // Ativos primeiro; dentro de cada grupo, ordem alfabética pelo nome.
       .order("active", { ascending: false })
       .order("name", { ascending: true }),
@@ -41,12 +41,15 @@ export default async function UsuariosPage() {
       <div>
         <h2 className="text-lg font-semibold">Usuários</h2>
         <p className="text-sm text-muted-foreground">
-          Criar, ativar/desativar e definir unidade e perfil dos usuários.
+          Criar, ativar/desativar e definir unidades e perfil dos usuários.
         </p>
       </div>
 
       <UsersManager
-        initialUsers={(users ?? []) as any}
+        initialUsers={(users ?? []).map(({ profile_units, ...u }) => ({
+          ...u,
+          unit_ids: (profile_units ?? []).map((pu) => pu.unit_id),
+        })) as any}
         units={units ?? []}
         currentUserId={user.id}
       />

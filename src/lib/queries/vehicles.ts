@@ -20,10 +20,16 @@ export async function getCurrentStockList(
   unitFilter?: string,
   limit?: number
 ): Promise<CurrentStockRow[]> {
+  // Usuário comum vê o estoque das próprias unidades (ou de uma delas,
+  // se filtrar).
   const scope = await getUserScope();
+  let allowedUnits: string[] | null = null;
   if (!scope.isAdmin) {
-    if (!scope.unitId) return [];
-    unitFilter = scope.unitId;
+    if (scope.unitIds.length === 0) return [];
+    if (!unitFilter || !scope.unitIds.includes(unitFilter)) {
+      unitFilter = undefined;
+      allowedUnits = scope.unitIds;
+    }
   }
 
   const supabase = await createClient();
@@ -39,6 +45,7 @@ export async function getCurrentStockList(
     query = query.ilike("plate", `%${plateFilter.trim().toUpperCase()}%`);
   }
   if (unitFilter) query = query.eq("unit_id", unitFilter);
+  else if (allowedUnits) query = query.in("unit_id", allowedUnits);
   if (limit) query = query.limit(limit);
 
   const { data, error } = await query;

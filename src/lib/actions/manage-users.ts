@@ -40,9 +40,11 @@ export async function createUserAccount(
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
   const role = String(formData.get("role") ?? "user");
-  const unitId = String(formData.get("unitId") ?? "");
+  const unitIds = [
+    ...new Set(formData.getAll("unitIds").map(String).filter(Boolean)),
+  ];
 
-  if (!name || !email || !password || !unitId) {
+  if (!name || !email || !password || unitIds.length === 0) {
     return {
       success: false,
       error: "Preencha todos os campos obrigatórios.",
@@ -85,11 +87,21 @@ export async function createUserAccount(
     name,
     email,
     role,
-    unit_id: unitId,
+    // A primeira unidade marcada vira a principal.
+    unit_id: unitIds[0],
     active: true,
   });
 
-  if (profileError) {
+  const { error: unitsError } = profileError
+    ? { error: null }
+    : await supabase.from("profile_units").insert(
+        unitIds.map((unitId) => ({
+          profile_id: created.user.id,
+          unit_id: unitId,
+        }))
+      );
+
+  if (profileError || unitsError) {
     // Se o perfil não foi criado, desfaz a criação do usuário no Auth
     // pra não deixar um login "fantasma" sem perfil vinculado.
     await adminClient.auth.admin.deleteUser(created.user.id);
@@ -105,7 +117,7 @@ export async function createUserAccount(
 
 export async function updateUserProfile(
   userId: string,
-  changes: { role?: "admin" | "user"; unitId?: string; active?: boolean }
+  changes: { role?: "admin" | "user"; unitIds?: string[]; active?: boolean }
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (!admin) {
@@ -127,7 +139,21 @@ export async function updateUserProfile(
     updated_at: new Date().toISOString(),
   };
   if (changes.role) update.role = changes.role;
-  if (changes.unitId) update.unit_id = changes.unitId;
+  if (changes.unitIds) {
+    if (changes.unitIds.length === 0) {
+      return { success: false, error: "Selecione pelo menos uma unidade." };
+    }
+    // A unidade principal continua a mesma se ainda estiver habilitada.
+    const { data: current } = await supabase
+      .from("profiles")
+      .select("unit_id")
+      .eq("id", userId)
+      .single();
+    update.unit_id =
+      current?.unit_id && changes.unitIds.includes(current.unit_id)
+        ? current.unit_id
+        : changes.unitIds[0];
+  }
   if (typeof changes.active === "boolean") update.active = changes.active;
 
   const { error } = await supabase
@@ -137,6 +163,27 @@ export async function updateUserProfile(
 
   if (error) {
     return { success: false, error: "Não foi possível atualizar o usuário." };
+  }
+
+  if (changes.unitIds) {
+    const unitIds = changes.unitIds;
+    const [{ error: deleteError }, { error: insertError }] = await Promise.all([
+      supabase
+        .from("profile_units")
+        .delete()
+        .eq("profile_id", userId)
+        .not("unit_id", "in", `(${unitIds.join(",")})`),
+      supabase.from("profile_units").upsert(
+        unitIds.map((unitId) => ({ profile_id: userId, unit_id: unitId })),
+        { onConflict: "profile_id,unit_id", ignoreDuplicates: true }
+      ),
+    ]);
+    if (deleteError || insertError) {
+      return {
+        success: false,
+        error: "Não foi possível atualizar as unidades do usuário.",
+      };
+    }
   }
 
   revalidatePath("/flow/configuracoes/usuarios");

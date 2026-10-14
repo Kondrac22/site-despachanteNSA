@@ -63,6 +63,11 @@ export default async function DashboardPage({
       getUserScope(),
     ]);
 
+  // Quem trabalha em mais de uma unidade também filtra, só entre as suas.
+  const unitOptions = scope.isAdmin
+    ? filterOptions.units
+    : filterOptions.units.filter((u) => scope.unitIds.includes(u.id));
+
   // Cada card tem a sua cor e leva para a lista correspondente.
   const cards: {
     label: string;
@@ -120,10 +125,10 @@ export default async function DashboardPage({
       </div>
 
       <DashboardFilters
-        units={filterOptions.units}
+        units={unitOptions}
         serviceTypes={filterOptions.serviceTypes}
         requesters={filterOptions.requesters}
-        showUnitFilter={scope.isAdmin}
+        showUnitFilter={unitOptions.length > 1}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">

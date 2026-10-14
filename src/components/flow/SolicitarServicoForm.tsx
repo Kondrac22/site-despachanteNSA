@@ -40,16 +40,23 @@ const OTHER_FILES = "__outros__";
 
 type ServiceType = { id: string; name: string; document_checklist: string[] };
 
+type Unit = { id: string; name: string };
+
 type SolicitarServicoFormProps = {
   serviceTypes: ServiceType[];
   isAdmin: boolean;
   todayIso: string;
+  // Unidades habilitadas pro usuário; com mais de uma, ele escolhe.
+  units: Unit[];
+  defaultUnitId?: string;
 };
 
 export default function SolicitarServicoForm({
   serviceTypes,
   isAdmin,
   todayIso,
+  units,
+  defaultUnitId,
 }: SolicitarServicoFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -181,7 +188,8 @@ export default function SolicitarServicoForm({
       </CardHeader>
       <CardContent>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
-          {/* Placa, urgência e data numa linha só (quebra no celular). */}
+          {/* Placa, urgência, data e unidade numa linha só (quebra no
+              celular). */}
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-2">
               <Label htmlFor="plate">Placa *</Label>
@@ -213,6 +221,32 @@ export default function SolicitarServicoForm({
                 className="w-auto"
               />
             </div>
+
+            {units.length > 1 && (
+              <div className="space-y-2">
+                <Label htmlFor="unitId">Unidade *</Label>
+                <Select
+                  name="unitId"
+                  required
+                  defaultValue={
+                    units.some((u) => u.id === defaultUnitId)
+                      ? defaultUnitId
+                      : undefined
+                  }
+                >
+                  <SelectTrigger id="unitId" className="w-[180px]">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        {unit.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

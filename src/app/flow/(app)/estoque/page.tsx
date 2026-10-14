@@ -46,6 +46,10 @@ export default async function EstoquePage({
     getFilterOptions(),
     getUserScope(),
   ]);
+  // Quem trabalha em mais de uma unidade também filtra, só entre as suas.
+  const unitOptions = scope.isAdmin
+    ? filterOptions.units
+    : filterOptions.units.filter((u) => scope.unitIds.includes(u.id));
   const normalizedFilter = params.plate?.trim().toUpperCase();
   const groups = groupByUnit(rows);
 
@@ -61,7 +65,7 @@ export default async function EstoquePage({
         </div>
         {/* <a> em vez de <Link>: é um download, não uma navegação. O
             arquivo ignora o filtro: traz o estoque inteiro (admin) ou o
-            da unidade do usuário. */}
+            das unidades do usuário. */}
         <Button asChild variant="outline">
           <a href="/flow/estoque/exportar" download>
             Exportar para Excel
@@ -76,15 +80,16 @@ export default async function EstoquePage({
           defaultValue={params.plate ?? ""}
           className="max-w-xs uppercase"
         />
-        {/* Só o admin escolhe a unidade; os demais veem a própria. */}
-        {scope.isAdmin && (
+        {/* Admin escolhe entre todas as unidades; os demais, entre as
+            suas (com uma só, não há o que escolher). */}
+        {unitOptions.length > 1 && (
           <Select name="unit" defaultValue={unitFilter || ALL}>
             <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Unidade" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todas as unidades</SelectItem>
-              {filterOptions.units.map((unit) => (
+              {unitOptions.map((unit) => (
                 <SelectItem key={unit.id} value={unit.id}>
                   {unit.name}
                 </SelectItem>
