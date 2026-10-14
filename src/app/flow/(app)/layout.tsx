@@ -30,6 +30,7 @@ export default async function PrestacaoServicosLayout({
     <div className="min-h-screen bg-muted/20">
       <ModuleNav
         isAdmin={profile?.role === "admin"}
+        canSeeFinancial={profile?.role !== "vendedor"}
         userName={profile?.name ?? user.email ?? ""}
       />
       <main>{children}</main>

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { VENDEDOR_READ_ONLY_ERROR } from "@/lib/constants/roles";
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
@@ -22,6 +23,9 @@ export async function setServiceUrgency(
     .single();
   if (!profile || !profile.active) {
     return { success: false, error: "Sessão inválida." };
+  }
+  if (profile.role === "vendedor") {
+    return { success: false, error: VENDEDOR_READ_ONLY_ERROR };
   }
 
   const { data: serviceRequest } = await supabase

@@ -6,6 +6,7 @@ import {
   STATUS_WITH_REASON,
   type ServiceStatus as Status,
 } from "@/lib/constants/service-status";
+import { VENDEDOR_READ_ONLY_ERROR } from "@/lib/constants/roles";
 
 export type ChangeStatusResult =
   | { success: true; duplicateConfirmNeeded?: boolean; plate?: string }
@@ -44,6 +45,9 @@ export async function changeServiceStatus(
   const supabase = await createClient();
   const profile = await getAuthedProfile(supabase);
   if (!profile) return { success: false, error: "Sessão inválida." };
+  if (profile.role === "vendedor") {
+    return { success: false, error: VENDEDOR_READ_ONLY_ERROR };
+  }
 
   const { data: serviceRequest } = await supabase
     .from("service_requests")
@@ -212,6 +216,9 @@ export async function confirmDuplicateVehicleEntry(
   const supabase = await createClient();
   const profile = await getAuthedProfile(supabase);
   if (!profile) return { success: false, error: "Sessão inválida." };
+  if (profile.role === "vendedor") {
+    return { success: false, error: VENDEDOR_READ_ONLY_ERROR };
+  }
 
   const { data: serviceRequest } = await supabase
     .from("service_requests")

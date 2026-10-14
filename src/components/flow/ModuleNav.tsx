@@ -12,10 +12,15 @@ import GlobalSearch from "@/components/flow/GlobalSearch";
 
 type ModuleNavProps = {
   isAdmin: boolean;
+  canSeeFinancial: boolean;
   userName: string;
 };
 
-export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
+export default function ModuleNav({
+  isAdmin,
+  canSeeFinancial,
+  userName,
+}: ModuleNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -26,8 +31,11 @@ export default function ModuleNav({ isAdmin, userName }: ModuleNavProps) {
     { href: "/flow/servicos", label: "Acompanhamento" },
     { href: "/flow/estoque", label: "Estoque de Veículos" },
     { href: "/flow/historico", label: "Histórico" },
-    // Financeiro é só leitura: todos veem (cada um, as suas unidades).
-    { href: "/flow/financeiro", label: "Financeiro" },
+    // Financeiro é só leitura: todos veem (cada um, as suas unidades),
+    // menos o vendedor.
+    ...(canSeeFinancial
+      ? [{ href: "/flow/financeiro", label: "Financeiro" }]
+      : []),
     ...(isAdmin
       ? [{ href: "/flow/configuracoes", label: "Configurações" }]
       : []),

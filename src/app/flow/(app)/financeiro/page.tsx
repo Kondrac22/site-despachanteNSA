@@ -33,13 +33,20 @@ export default async function FinanceiroPage({
 }: {
   searchParams: Promise<{ month?: string; year?: string; unit?: string }>;
 }) {
-  // Todos os usuários acessam (só visualizar e exportar); quem não é
-  // admin vê apenas as próprias unidades.
+  // Todos os usuários acessam (só visualizar e exportar), menos o
+  // vendedor; quem não é admin vê apenas as próprias unidades.
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/flow/login");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role === "vendedor") redirect("/flow");
 
   const params = await searchParams;
   const {

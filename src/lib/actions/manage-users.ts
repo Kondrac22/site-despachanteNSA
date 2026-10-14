@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isRole, type Role } from "@/lib/constants/roles";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -56,7 +57,7 @@ export async function createUserAccount(
       error: "A senha precisa ter pelo menos 6 caracteres.",
     };
   }
-  if (role !== "admin" && role !== "user") {
+  if (!isRole(role)) {
     return { success: false, error: "Perfil inválido." };
   }
 
@@ -117,7 +118,7 @@ export async function createUserAccount(
 
 export async function updateUserProfile(
   userId: string,
-  changes: { role?: "admin" | "user"; unitIds?: string[]; active?: boolean }
+  changes: { role?: Role; unitIds?: string[]; active?: boolean }
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (!admin) {
@@ -138,7 +139,12 @@ export async function updateUserProfile(
   const update: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
-  if (changes.role) update.role = changes.role;
+  if (changes.role) {
+    if (!isRole(changes.role)) {
+      return { success: false, error: "Perfil inválido." };
+    }
+    update.role = changes.role;
+  }
   if (changes.unitIds) {
     if (changes.unitIds.length === 0) {
       return { success: false, error: "Selecione pelo menos uma unidade." };

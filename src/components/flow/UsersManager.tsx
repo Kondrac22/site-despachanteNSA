@@ -31,6 +31,7 @@ import {
   createUserAccount,
   updateUserProfile,
 } from "@/lib/actions/manage-users";
+import { ROLE_OPTIONS, type Role } from "@/lib/constants/roles";
 
 type Unit = { id: string; name: string };
 
@@ -38,7 +39,7 @@ type UserRow = {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "user";
+  role: Role;
   active: boolean;
   unit_ids: string[];
 };
@@ -80,7 +81,7 @@ export default function UsersManager({
     });
   }
 
-  async function handleRoleChange(userId: string, role: "admin" | "user") {
+  async function handleRoleChange(userId: string, role: Role) {
     const previous = users.find((u) => u.id === userId)?.role;
     applyLocalChange(userId, { role });
     const result = await updateUserProfile(userId, { role });
@@ -199,8 +200,11 @@ export default function UsersManager({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">Usuário</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
+                    {ROLE_OPTIONS.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -261,7 +265,7 @@ export default function UsersManager({
                   <Select
                     value={u.role}
                     onValueChange={(value) =>
-                      handleRoleChange(u.id, value as "admin" | "user")
+                      handleRoleChange(u.id, value as Role)
                     }
                     disabled={u.id === currentUserId}
                   >
@@ -269,8 +273,11 @@ export default function UsersManager({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user">Usuário</SelectItem>
-                      <SelectItem value="admin">Administrador</SelectItem>
+                      {ROLE_OPTIONS.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          {role.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </td>

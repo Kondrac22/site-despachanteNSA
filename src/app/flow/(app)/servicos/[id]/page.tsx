@@ -62,6 +62,8 @@ export default async function ServiceDetailPage({
     .eq("id", user.id)
     .single();
   const isAdmin = currentProfile?.role === "admin";
+  // Vendedor só consulta: não vê nenhuma ação que altere o serviço.
+  const isReadOnly = currentProfile?.role === "vendedor";
 
   const detail = await getServiceRequestDetail(id);
   if (!detail) notFound();
@@ -73,7 +75,8 @@ export default async function ServiceDetailPage({
   const isUrgent = Boolean(serviceRequest.is_urgent) && isOpen;
   // Mesma regra da mudança de status: admin ou quem criou o serviço.
   const canManage =
-    isAdmin || (serviceRequest as any).profiles?.id === user.id;
+    !isReadOnly &&
+    (isAdmin || (serviceRequest as any).profiles?.id === user.id);
   const canToggleUrgent = isOpen && canManage;
   const canAttachConclusion =
     serviceRequest.status === "FINALIZADO" && canManage;
@@ -275,27 +278,29 @@ export default async function ServiceDetailPage({
           </Card>
         )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Ações</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <StatusActions
-            serviceRequestId={serviceRequest.id}
-            status={serviceRequest.status as ServiceStatus}
-            plate={serviceRequest.plate}
-            isAdmin={isAdmin}
-          />
-          {canToggleUrgent && (
-            <div className="border-t pt-4">
-              <UrgentToggle
-                serviceRequestId={serviceRequest.id}
-                isUrgent={isUrgent}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {!isReadOnly && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ações</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <StatusActions
+              serviceRequestId={serviceRequest.id}
+              status={serviceRequest.status as ServiceStatus}
+              plate={serviceRequest.plate}
+              isAdmin={isAdmin}
+            />
+            {canToggleUrgent && (
+              <div className="border-t pt-4">
+                <UrgentToggle
+                  serviceRequestId={serviceRequest.id}
+                  isUrgent={isUrgent}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {serviceRequest.notes && (
         <Card>

@@ -7,6 +7,10 @@ import {
   MAX_FILE_SIZE_BYTES,
   fileExtension,
 } from "@/lib/constants/files";
+import {
+  VENDEDOR_READ_ONLY_ERROR,
+  VENDEDOR_UPLOAD_WINDOW_MINUTES,
+} from "@/lib/constants/roles";
 
 export type FileCategory = "SOLICITACAO" | "CONCLUSAO";
 
@@ -48,7 +52,7 @@ export async function registerServiceFiles(
 
   const { data: serviceRequest } = await supabase
     .from("service_requests")
-    .select("id, status, created_by")
+    .select("id, status, created_by, created_at")
     .eq("id", serviceRequestId)
     .single();
 
@@ -62,6 +66,18 @@ export async function registerServiceFiles(
       success: false,
       error: "Você não tem permissão para anexar documentos neste serviço.",
     };
+  }
+
+  // Vendedor só anexa os documentos da própria solicitação, no envio
+  // feito logo depois de criá-la (o banco confere a mesma janela).
+  if (profile.role === "vendedor") {
+    const ageMs = Date.now() - new Date(serviceRequest.created_at).getTime();
+    if (
+      category !== "SOLICITACAO" ||
+      ageMs > VENDEDOR_UPLOAD_WINDOW_MINUTES * 60 * 1000
+    ) {
+      return { success: false, error: VENDEDOR_READ_ONLY_ERROR };
+    }
   }
 
   // Documentos da solicitação: enquanto o serviço está em aberto.

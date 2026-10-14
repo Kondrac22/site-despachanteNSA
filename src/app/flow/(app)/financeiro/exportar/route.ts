@@ -9,8 +9,9 @@ import {
 import { buildCsv, csvDateTime, csvNumber, csvResponse } from "@/lib/csv";
 
 // Exporta exatamente o período (e a unidade) filtrados na tela do Financeiro.
-// Qualquer usuário pode exportar; quem não é admin recebe só as próprias
-// unidades (o filtro é aplicado em getFinancialReport).
+// Qualquer usuário, menos o vendedor, pode exportar; quem não é admin
+// recebe só as próprias unidades (o filtro é aplicado em
+// getFinancialReport).
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {
@@ -18,6 +19,15 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role === "vendedor") {
+    return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
   }
 
   const searchParams = new URL(request.url).searchParams;
