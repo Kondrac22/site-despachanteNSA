@@ -13,8 +13,10 @@ export type ChangeStatusResult =
   | { success: false; error: string };
 
 const ALLOWED_TRANSITIONS: Record<Status, Status[]> = {
-  A_FAZER: ["PARADO", "PENDENTE_DOCUMENTO", "FINALIZADO"],
+  A_FAZER: ["PARADO", "EM_ANALISE_DETRAN", "PENDENTE_DOCUMENTO", "FINALIZADO"],
   PARADO: ["A_FAZER"],
+  // O Detran pode devolver pedindo documento, travar o processo ou aprovar.
+  EM_ANALISE_DETRAN: ["A_FAZER", "PARADO", "PENDENTE_DOCUMENTO", "FINALIZADO"],
   PENDENTE_DOCUMENTO: ["A_FAZER", "FINALIZADO"],
   FINALIZADO: [],
 };

@@ -84,10 +84,11 @@ export default function StatusActions({
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [finishFiles, setFinishFiles] = useState<File[]>([]);
 
+  // Devolve null se a mudança foi recusada.
   async function handleChange(
     newStatus: ServiceStatus,
     reason?: string
-  ) {
+  ): Promise<{ duplicateConfirmNeeded: boolean } | null> {
     setLoading(true);
     const result = await changeServiceStatus(serviceRequestId, newStatus, {
       reason,
@@ -96,15 +97,21 @@ export default function StatusActions({
 
     if (!result.success) {
       toast.error(result.error);
-      return false;
+      return null;
     }
 
     toast.success("Status atualizado.");
-    if (result.duplicateConfirmNeeded) {
+    const duplicateConfirmNeeded = Boolean(result.duplicateConfirmNeeded);
+    if (duplicateConfirmNeeded) {
       setShowDuplicateDialog(true);
     }
     router.refresh();
-    return true;
+    return { duplicateConfirmNeeded };
+  }
+
+  // Depois de finalizar, volta pra lista de Acompanhamento.
+  function goToList() {
+    router.push("/flow/servicos");
   }
 
   async function handleConfirmReason() {
@@ -129,9 +136,12 @@ export default function StatusActions({
   // documento pode ser anexado depois, pelo card de Documentos.
   // O e-mail ao solicitante só sai depois do anexo, para ir com ele. Se o
   // anexo falhar, o e-mail sai quando o documento for anexado de novo.
+  // No fim, volta para o Acompanhamento — exceto se o anexo falhar (fica
+  // na página pra anexar de novo) ou se ainda faltar responder o alerta de
+  // placa já em estoque (volta depois que ele for respondido).
   async function handleConfirmFinish() {
-    const ok = await handleChange("FINALIZADO");
-    if (!ok) return;
+    const changed = await handleChange("FINALIZADO");
+    if (!changed) return;
     setShowFinishDialog(false);
     setLoading(true);
 
@@ -156,7 +166,11 @@ export default function StatusActions({
     await notifyRequester();
     setLoading(false);
     setFinishFiles([]);
-    router.refresh();
+    if (changed.duplicateConfirmNeeded) {
+      router.refresh();
+    } else {
+      goToList();
+    }
   }
 
   async function notifyRequester() {
@@ -184,13 +198,56 @@ export default function StatusActions({
       return;
     }
     toast.success("Entrada duplicada registrada.");
-    router.refresh();
+    goToList();
   }
 
   return (
     <div className="flex flex-wrap gap-2">
       {status === "A_FAZER" && (
         <>
+          <Button
+            variant="outline"
+            disabled={loading}
+            onClick={() => setReasonStatus("PARADO")}
+          >
+            Marcar como Parado
+          </Button>
+          <Button
+            variant="outline"
+            className="border-orange-300 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+            disabled={loading}
+            onClick={() => handleChange("EM_ANALISE_DETRAN")}
+          >
+            Enviar para análise do Detran
+          </Button>
+          <Button
+            variant="outline"
+            className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+            disabled={loading}
+            onClick={() => setReasonStatus("PENDENTE_DOCUMENTO")}
+          >
+            Pendência de documento
+          </Button>
+          {isAdmin && (
+            <Button
+              disabled={loading}
+              onClick={() => setShowFinishDialog(true)}
+            >
+              Finalizar Serviço
+            </Button>
+          )}
+        </>
+      )}
+
+      {status === "EM_ANALISE_DETRAN" && (
+        <>
+          <Button
+            variant="outline"
+            disabled={loading}
+            onClick={() => handleChange("A_FAZER")}
+          >
+            Voltar para A Fazer
+          </Button>
           <Button
             variant="outline"
             disabled={loading}
@@ -350,7 +407,12 @@ export default function StatusActions({
       {/* Popup: alerta de duplicidade (fase 11) */}
       <AlertDialog
         open={showDuplicateDialog}
-        onOpenChange={setShowDuplicateDialog}
+        onOpenChange={(open) => {
+          setShowDuplicateDialog(open);
+          // "Cancelar" não registra a entrada, mas o serviço já está
+          // finalizado: volta pro Acompanhamento do mesmo jeito.
+          if (!open) goToList();
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -364,7 +426,12 @@ export default function StatusActions({
             <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               disabled={loading}
-              onClick={handleConfirmDuplicate}
+              onClick={(e) => {
+                // Fecha só depois de registrar (handleConfirmDuplicate),
+                // senão o onOpenChange já voltaria pra lista antes.
+                e.preventDefault();
+                handleConfirmDuplicate();
+              }}
             >
               Duplicar Entrada
             </AlertDialogAction>

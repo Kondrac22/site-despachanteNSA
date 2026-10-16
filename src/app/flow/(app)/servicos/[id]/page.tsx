@@ -88,14 +88,28 @@ export default async function ServiceDetailPage({
     name: string;
   } | null;
 
+  const currentUnit = (serviceRequest as any).units as {
+    id: string;
+    name: string;
+  } | null;
+
   let editableTypes: { id: string; name: string }[] = [];
+  let editableUnits: { id: string; name: string }[] = [];
   if (canEdit) {
-    const { data: activeTypes } = await supabase
-      .from("service_types")
-      .select("id, name")
-      .eq("active", true)
-      .order("name");
+    const [{ data: activeTypes }, { data: activeUnits }] = await Promise.all([
+      supabase
+        .from("service_types")
+        .select("id, name")
+        .eq("active", true)
+        .order("name"),
+      supabase.from("units").select("id, name").eq("active", true).order("name"),
+    ]);
     editableTypes = activeTypes ?? [];
+    editableUnits = activeUnits ?? [];
+    // Mantém a unidade atual como opção mesmo se ela tiver sido desativada.
+    if (currentUnit && !editableUnits.some((u) => u.id === currentUnit.id)) {
+      editableUnits = [currentUnit, ...editableUnits];
+    }
     // Mantém o tipo atual como opção mesmo se ele tiver sido desativado.
     if (currentType && !editableTypes.some((t) => t.id === currentType.id)) {
       editableTypes = [currentType, ...editableTypes];
@@ -174,8 +188,10 @@ export default async function ServiceDetailPage({
             serviceRequestId={serviceRequest.id}
             plate={serviceRequest.plate}
             serviceTypeId={currentType?.id ?? ""}
+            unitId={currentUnit?.id ?? ""}
             notes={serviceRequest.notes}
             serviceTypes={editableTypes}
+            units={editableUnits}
           />
         )}
       </div>

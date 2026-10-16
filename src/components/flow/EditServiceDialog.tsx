@@ -26,19 +26,24 @@ import { updateServiceRequest } from "@/lib/actions/update-service-request";
 import PlateInput from "@/components/flow/PlateInput";
 
 type ServiceType = { id: string; name: string };
+type Unit = { id: string; name: string };
 
 export default function EditServiceDialog({
   serviceRequestId,
   plate,
   serviceTypeId,
+  unitId,
   notes,
   serviceTypes,
+  units,
 }: {
   serviceRequestId: string;
   plate: string;
   serviceTypeId: string;
+  unitId: string;
   notes: string | null;
   serviceTypes: ServiceType[];
+  units: Unit[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -53,6 +58,7 @@ export default function EditServiceDialog({
     const result = await updateServiceRequest(serviceRequestId, {
       plate: String(formData.get("plate") ?? ""),
       serviceTypeId: String(formData.get("serviceTypeId") ?? ""),
+      unitId: String(formData.get("unitId") ?? ""),
       notes: String(formData.get("notes") ?? ""),
     });
     setSaving(false);
@@ -105,6 +111,26 @@ export default function EditServiceDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-unitId">Unidade *</Label>
+            <Select name="unitId" defaultValue={unitId} required>
+              <SelectTrigger id="edit-unitId" className="w-full">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                {units.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id}>
+                    {unit.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Ao trocar a unidade, o serviço recebe um novo protocolo da
+              unidade escolhida.
+            </p>
           </div>
 
           <div className="space-y-2">

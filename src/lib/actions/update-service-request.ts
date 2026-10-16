@@ -25,7 +25,7 @@ async function requireAdmin() {
 
 export async function updateServiceRequest(
   serviceRequestId: string,
-  input: { plate: string; serviceTypeId: string; notes: string }
+  input: { plate: string; serviceTypeId: string; unitId: string; notes: string }
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (!admin) {
@@ -39,7 +39,9 @@ export async function updateServiceRequest(
 
   const { data: serviceRequest } = await supabase
     .from("service_requests")
-    .select("id, plate, status, notes, service_type_id, service_types ( name )")
+    .select(
+      "id, plate, protocol, status, notes, service_type_id, unit_id, service_types ( name ), units ( name )"
+    )
     .eq("id", serviceRequestId)
     .single();
 
@@ -94,6 +96,49 @@ export async function updateServiceRequest(
     changes.push(`Tipo: ${oldTypeName} → ${newType.name}`);
   }
 
+  // Trocar de unidade gera um protocolo novo, com o código e o próximo
+  // número da unidade de destino (igual à criação do serviço).
+  if (input.unitId && input.unitId !== serviceRequest.unit_id) {
+    const { data: newUnit } = await supabase
+      .from("units")
+      .select("id, name, code")
+      .eq("id", input.unitId)
+      .eq("active", true)
+      .single();
+
+    if (!newUnit) {
+      return { success: false, error: "Unidade inválida." };
+    }
+
+    if (!newUnit.code) {
+      return {
+        success: false,
+        error:
+          "A unidade escolhida ainda não tem um código de protocolo configurado. Configure em Unidades.",
+      };
+    }
+
+    const { data: nextNumber, error: protocolError } = await supabase.rpc(
+      "increment_unit_protocol",
+      { p_unit_id: newUnit.id }
+    );
+
+    if (protocolError || nextNumber == null) {
+      console.error("increment_unit_protocol error:", protocolError?.message);
+      return {
+        success: false,
+        error: "Não foi possível gerar o número de protocolo. Tente novamente.",
+      };
+    }
+
+    const protocol = `${newUnit.code}-${String(nextNumber).padStart(4, "0")}`;
+    const oldUnitName: string = (serviceRequest as any).units?.name ?? "—";
+    update.unit_id = newUnit.id;
+    update.protocol = protocol;
+    changes.push(`Unidade: ${oldUnitName} → ${newUnit.name}`);
+    changes.push(`Protocolo: ${serviceRequest.protocol ?? "—"} → ${protocol}`);
+  }
+
   if (notes !== currentNotes) {
     update.notes = notes || null;
     changes.push("Observações alteradas");
@@ -125,5 +170,6 @@ export async function updateServiceRequest(
   revalidatePath(`/flow/servicos/${serviceRequestId}`);
   revalidatePath("/flow/servicos");
   revalidatePath("/flow");
+  revalidatePath("/flow/estoque");
   return { success: true };
 }

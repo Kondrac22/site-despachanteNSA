@@ -119,18 +119,26 @@ export async function getDashboardIndicators(
     return count ?? 0;
   }
 
-  const [parado, aFazer, pendenteDocumento, urgentes, vehiclesInStock] =
-    await Promise.all([
-      countByStatus("PARADO"),
-      countByStatus("A_FAZER"),
-      countByStatus("PENDENTE_DOCUMENTO"),
-      countUrgentOpen(),
-      countVehiclesInStock(),
-    ]);
+  const [
+    parado,
+    aFazer,
+    emAnaliseDetran,
+    pendenteDocumento,
+    urgentes,
+    vehiclesInStock,
+  ] = await Promise.all([
+    countByStatus("PARADO"),
+    countByStatus("A_FAZER"),
+    countByStatus("EM_ANALISE_DETRAN"),
+    countByStatus("PENDENTE_DOCUMENTO"),
+    countUrgentOpen(),
+    countVehiclesInStock(),
+  ]);
 
   return {
     parado,
     aFazer,
+    emAnaliseDetran,
     pendenteDocumento,
     urgentes,
     vehiclesInStock,

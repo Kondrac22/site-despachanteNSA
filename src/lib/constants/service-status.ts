@@ -3,12 +3,14 @@
 export type ServiceStatus =
   | "PARADO"
   | "A_FAZER"
+  | "EM_ANALISE_DETRAN"
   | "PENDENTE_DOCUMENTO"
   | "FINALIZADO";
 
 export const STATUS_LABEL: Record<string, string> = {
   PARADO: "🔴 Parado",
   A_FAZER: "🟢 A Fazer",
+  EM_ANALISE_DETRAN: "🟠 Em análise Detran",
   PENDENTE_DOCUMENTO: "🔵 Pendência de documento",
   FINALIZADO: "⚪ Finalizado",
 };

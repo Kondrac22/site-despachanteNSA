@@ -87,8 +87,8 @@ export default async function DashboardPage({
       label: "Parados",
       value: indicators.parado,
       href: "/flow/servicos?status=PARADO",
-      box: "bg-orange-100 hover:ring-orange-300",
-      text: "text-orange-700",
+      box: "bg-rose-100 hover:ring-rose-300",
+      text: "text-rose-700",
     },
     {
       label: "A fazer",
@@ -96,6 +96,13 @@ export default async function DashboardPage({
       href: "/flow/servicos?status=A_FAZER",
       box: "bg-green-100 hover:ring-green-300",
       text: "text-green-700",
+    },
+    {
+      label: "Em análise Detran",
+      value: indicators.emAnaliseDetran,
+      href: "/flow/servicos?status=EM_ANALISE_DETRAN",
+      box: "bg-orange-100 hover:ring-orange-300",
+      text: "text-orange-700",
     },
     {
       label: "Pendência de doc.",
@@ -131,7 +138,7 @@ export default async function DashboardPage({
         showUnitFilter={unitOptions.length > 1}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {cards.map((card) => (
           <Link
             key={card.label}

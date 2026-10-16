@@ -226,8 +226,10 @@ export default function SolicitarServicoForm({
             {units.length === 1 && (
               <input type="hidden" name="unitId" value={units[0].id} />
             )}
+            {/* Ocupa o espaço que sobra na linha, pra não quebrar
+                para baixo. */}
             {units.length > 1 && (
-              <div className="space-y-2">
+              <div className="min-w-[140px] flex-1 space-y-2">
                 <Label htmlFor="unitId">Unidade *</Label>
                 <Select
                   name="unitId"
@@ -238,7 +240,7 @@ export default function SolicitarServicoForm({
                       : undefined
                   }
                 >
-                  <SelectTrigger id="unitId" className="w-[180px]">
+                  <SelectTrigger id="unitId" className="w-full">
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
