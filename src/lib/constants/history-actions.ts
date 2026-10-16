@@ -5,6 +5,7 @@ export const ACTION_OPTIONS = [
   { id: "STATUS_ALTERADO", name: "Status alterado" },
   { id: "DOCUMENTO_ANEXADO", name: "Documento anexado" },
   { id: "DOCUMENTO_ENTREGUE", name: "Documento de conclusão anexado" },
+  { id: "DOCUMENTO_EXCLUIDO", name: "Documento excluído" },
   { id: "ENTRADA_ESTOQUE", name: "Entrada no estoque" },
   { id: "ENTRADA_DUPLICADA", name: "Entrada duplicada" },
   { id: "SAIDA_ESTOQUE", name: "Saída do estoque" },

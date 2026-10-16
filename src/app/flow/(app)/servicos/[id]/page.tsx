@@ -12,6 +12,7 @@ import EditServiceDialog from "@/components/flow/EditServiceDialog";
 import UrgentBadge from "@/components/flow/UrgentBadge";
 import UrgentToggle from "@/components/flow/UrgentToggle";
 import AttachServiceFiles from "@/components/flow/AttachServiceFiles";
+import DeleteFileButton from "@/components/flow/DeleteFileButton";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceRequestDetail } from "@/lib/queries/service-requests";
 import { formatBytes } from "@/lib/constants/files";
@@ -25,6 +26,7 @@ const ACTION_LABEL: Record<string, string> = {
   STATUS_ALTERADO: "Status alterado",
   DOCUMENTO_ANEXADO: "Documento anexado",
   DOCUMENTO_ENTREGUE: "Documento de conclusão anexado",
+  DOCUMENTO_EXCLUIDO: "Documento excluído",
   ENTRADA_ESTOQUE: "Entrada no estoque",
   ENTRADA_DUPLICADA: "Entrada duplicada autorizada",
   SAIDA_ESTOQUE: "Saída do estoque",
@@ -81,6 +83,8 @@ export default async function ServiceDetailPage({
   const canAttachConclusion =
     serviceRequest.status === "FINALIZADO" && canManage;
   const canAttachRequest = isOpen && canManage;
+  // Quem pode anexar também pode apagar, só em serviço aberto.
+  const canDeleteFiles = isOpen && canManage;
   const conclusionFiles = files.filter((f: any) => f.category === "CONCLUSAO");
   const requestFiles = files.filter((f: any) => f.category !== "CONCLUSAO");
   const currentType = (serviceRequest as any).service_types as {
@@ -135,20 +139,28 @@ export default async function ServiceDetailPage({
                 ({formatBytes(file.size_bytes)})
               </span>
             </span>
-            {file.url ? (
-              <a
-                href={file.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-primary hover:underline"
-              >
-                Baixar
-              </a>
-            ) : (
-              <span className="text-xs text-muted-foreground">
-                Link indisponível
-              </span>
-            )}
+            <span className="flex shrink-0 items-center gap-3">
+              {file.url ? (
+                <a
+                  href={file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary hover:underline"
+                >
+                  Baixar
+                </a>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  Link indisponível
+                </span>
+              )}
+              {canDeleteFiles && (
+                <DeleteFileButton
+                  fileId={file.id}
+                  fileName={file.original_name}
+                />
+              )}
+            </span>
           </li>
         ))}
       </ul>
