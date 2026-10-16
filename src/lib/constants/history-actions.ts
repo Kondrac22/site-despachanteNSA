@@ -11,5 +11,7 @@ export const ACTION_OPTIONS = [
   { id: "SAIDA_ESTOQUE", name: "Saída do estoque" },
   { id: "EDITADO", name: "Serviço editado" },
   { id: "URGENCIA", name: "Urgência alterada" },
+  { id: "EMAIL_ENVIADO", name: "E-mail de conclusão enviado" },
+  { id: "EMAIL_FALHOU", name: "Falha no e-mail de conclusão" },
   { id: "EXCLUIDO", name: "Pedido excluído" },
 ];
